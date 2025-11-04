@@ -69,6 +69,9 @@ export interface Config {
   collections: {
     users: User;
     media: Media;
+    people: Person;
+    vehicles: Vehicle;
+    'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
     'payload-migrations': PayloadMigration;
@@ -77,6 +80,9 @@ export interface Config {
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
+    people: PeopleSelect<false> | PeopleSelect<true>;
+    vehicles: VehiclesSelect<false> | VehiclesSelect<true>;
+    'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
     'payload-migrations': PayloadMigrationsSelect<false> | PayloadMigrationsSelect<true>;
@@ -119,6 +125,7 @@ export interface UserAuthOperations {
  */
 export interface User {
   id: string;
+  role: 'super-admin' | 'officer' | 'viewer';
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -143,7 +150,7 @@ export interface User {
  */
 export interface Media {
   id: string;
-  alt: string;
+  alt?: string | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -155,6 +162,161 @@ export interface Media {
   height?: number | null;
   focalX?: number | null;
   focalY?: number | null;
+  sizes?: {
+    thumbnail?: {
+      url?: string | null;
+      width?: number | null;
+      height?: number | null;
+      mimeType?: string | null;
+      filesize?: number | null;
+      filename?: string | null;
+    };
+    card?: {
+      url?: string | null;
+      width?: number | null;
+      height?: number | null;
+      mimeType?: string | null;
+      filesize?: number | null;
+      filename?: string | null;
+    };
+    portrait?: {
+      url?: string | null;
+      width?: number | null;
+      height?: number | null;
+      mimeType?: string | null;
+      filesize?: number | null;
+      filename?: string | null;
+    };
+  };
+}
+/**
+ * Fichier des personnes et informations d'identification.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "people".
+ */
+export interface Person {
+  id: string;
+  /**
+   * Photo d'identité de la personne
+   */
+  photo?: (string | null) | Media;
+  prenom: string;
+  nom: string;
+  dateNaissance: string;
+  lieuNaissance?: string | null;
+  sexe?: ('M' | 'F' | 'X') | null;
+  nationalite?: string | null;
+  /**
+   * Utilisé comme identifiant principal pour les recherches
+   */
+  numeroNational: string;
+  numeroPasseport?: string | null;
+  adresse?: string | null;
+  telephone?: string | null;
+  email?: string | null;
+  /**
+   * Cochez si la personne fait l'objet d'un avis de recherche
+   */
+  estArrete?: boolean | null;
+  statut?: ('actif' | 'detenu' | 'recherche' | 'libere') | null;
+  notes?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Gérer les véhicules enregistrés et suivre leur statut de recherche
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "vehicles".
+ */
+export interface Vehicle {
+  id: string;
+  /**
+   * Identifiant unique du véhicule
+   */
+  plateNumber: string;
+  /**
+   * Marquez le véhicule comme recherché par la police
+   */
+  underSearch: 'normal' | 'wanted';
+  brand: string;
+  model: string;
+  year: number;
+  color?:
+    | ('white' | 'black' | 'silver' | 'gray' | 'red' | 'blue' | 'green' | 'yellow' | 'orange' | 'brown' | 'other')
+    | null;
+  /**
+   * Numéro d'identification du véhicule
+   */
+  vin?: string | null;
+  /**
+   * Propriétaire principal de ce véhicule
+   */
+  owner: string | Person;
+  /**
+   * Date d'enregistrement du véhicule dans le système
+   */
+  registrationDate?: string | null;
+  /**
+   * Informations concernant la recherche de ce véhicule
+   */
+  searchDetails?: {
+    /**
+     * Officier ayant initié la recherche
+     */
+    declaredBy: string | User;
+    /**
+     * Renseignée automatiquement
+     */
+    declarationDate: string;
+    /**
+     * Niveau d'urgence pour cette recherche
+     */
+    priority: 'high' | 'medium' | 'low';
+    category: 'stolen' | 'crime' | 'traffic' | 'fines' | 'inspection' | 'other';
+    /**
+     * Soyez aussi précis que possible pour la sécurité des officiers
+     */
+    reason: string;
+    lastSeenLocation?: string | null;
+    /**
+     * Indiquez le lieu précis du vol ou de l'incident
+     */
+    stolenLocation?: string | null;
+    /**
+     * Moment estimé du vol ou de l'incident
+     */
+    stolenDate?: string | null;
+    notes?: string | null;
+  };
+  /**
+   * Statut d'immatriculation actuel dans le système
+   */
+  status?: ('active' | 'suspended' | 'deregistered') | null;
+  /**
+   * Ces notes sont visibles uniquement par le personnel autorisé
+   */
+  internalNotes?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-kv".
+ */
+export interface PayloadKv {
+  id: string;
+  key: string;
+  data:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -170,6 +332,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'media';
         value: string | Media;
+      } | null)
+    | ({
+        relationTo: 'people';
+        value: string | Person;
+      } | null)
+    | ({
+        relationTo: 'vehicles';
+        value: string | Vehicle;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -218,6 +388,7 @@ export interface PayloadMigration {
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
+  role?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -252,6 +423,103 @@ export interface MediaSelect<T extends boolean = true> {
   height?: T;
   focalX?: T;
   focalY?: T;
+  sizes?:
+    | T
+    | {
+        thumbnail?:
+          | T
+          | {
+              url?: T;
+              width?: T;
+              height?: T;
+              mimeType?: T;
+              filesize?: T;
+              filename?: T;
+            };
+        card?:
+          | T
+          | {
+              url?: T;
+              width?: T;
+              height?: T;
+              mimeType?: T;
+              filesize?: T;
+              filename?: T;
+            };
+        portrait?:
+          | T
+          | {
+              url?: T;
+              width?: T;
+              height?: T;
+              mimeType?: T;
+              filesize?: T;
+              filename?: T;
+            };
+      };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "people_select".
+ */
+export interface PeopleSelect<T extends boolean = true> {
+  photo?: T;
+  prenom?: T;
+  nom?: T;
+  dateNaissance?: T;
+  lieuNaissance?: T;
+  sexe?: T;
+  nationalite?: T;
+  numeroNational?: T;
+  numeroPasseport?: T;
+  adresse?: T;
+  telephone?: T;
+  email?: T;
+  estArrete?: T;
+  statut?: T;
+  notes?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "vehicles_select".
+ */
+export interface VehiclesSelect<T extends boolean = true> {
+  plateNumber?: T;
+  underSearch?: T;
+  brand?: T;
+  model?: T;
+  year?: T;
+  color?: T;
+  vin?: T;
+  owner?: T;
+  registrationDate?: T;
+  searchDetails?:
+    | T
+    | {
+        declaredBy?: T;
+        declarationDate?: T;
+        priority?: T;
+        category?: T;
+        reason?: T;
+        lastSeenLocation?: T;
+        stolenLocation?: T;
+        stolenDate?: T;
+        notes?: T;
+      };
+  status?: T;
+  internalNotes?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-kv_select".
+ */
+export interface PayloadKvSelect<T extends boolean = true> {
+  key?: T;
+  data?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

@@ -16,13 +16,13 @@ export const AvisRecherche: CollectionConfig = {
     delete: ({ req: { user } }) => user?.role === 'super-admin',
   },
   fields: [
-    // {
-    //   name: 'vehicule',
-    //   type: 'relationship',
-    //   relationTo: 'vehicles',
-    //   required: true,
-    //   label: 'Véhicule concerné',
-    // },
+    {
+      name: 'vehicule',
+      type: 'relationship',
+      relationTo: 'vehicles',
+      required: true,
+      label: 'Véhicule concerné',
+    },
     {
       type: 'row',
       fields: [

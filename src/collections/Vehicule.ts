@@ -1,5 +1,4 @@
 import { CollectionConfig } from 'payload'
-import { VehicleEditActions } from '../components/VehicleEditActions'
 import { generateVehiclePDF, generateVolPDF } from '../utils/pdf-generators'
 import PDFDocument from 'pdfkit'
 
@@ -11,7 +10,6 @@ export const Vehicles: CollectionConfig = {
     defaultColumns: ['numeroImmatriculation', 'typeVehicule', 'marque', 'modele', 'statut'],
     group: 'Gestion Douanière',
     description: '🚗 Gestion complète du registre des véhicules',
-    components: { BeforeDocument: [VehicleEditActions] } as any,
   },
   access: {
     read: () => true,
@@ -171,7 +169,7 @@ export const Vehicles: CollectionConfig = {
         {
           name: 'typeVehicule',
           type: 'select',
-          required: true,
+
           label: 'Type de véhicule',
           admin: {
             width: '20%',
@@ -189,7 +187,7 @@ export const Vehicles: CollectionConfig = {
         {
           name: 'statut',
           type: 'select',
-          required: true,
+
           label: 'Statut du véhicule',
           defaultValue: 'actif',
           admin: {
@@ -210,7 +208,7 @@ export const Vehicles: CollectionConfig = {
         {
           name: 'numeroImmatriculation',
           type: 'text',
-          required: true,
+
           unique: true,
           label: "Numéro d'immatriculation",
           admin: {
@@ -221,7 +219,7 @@ export const Vehicles: CollectionConfig = {
         {
           name: 'numeroSerie',
           type: 'text',
-          required: true,
+
           unique: true,
           label: 'Numéro de série (VIN/Châssis)',
           admin: {
@@ -232,7 +230,7 @@ export const Vehicles: CollectionConfig = {
         {
           name: 'marque',
           type: 'text',
-          required: true,
+
           label: 'Marque',
           admin: {
             width: '20%',
@@ -242,7 +240,7 @@ export const Vehicles: CollectionConfig = {
         {
           name: 'modele',
           type: 'text',
-          required: true,
+
           label: 'Modèle',
           admin: {
             width: '20%',
@@ -252,7 +250,7 @@ export const Vehicles: CollectionConfig = {
         {
           name: 'annee',
           type: 'number',
-          required: true,
+
           label: 'Année de fabrication',
           admin: {
             width: '20%',
@@ -268,7 +266,7 @@ export const Vehicles: CollectionConfig = {
         {
           name: 'couleur',
           type: 'text',
-          required: true,
+
           label: 'Couleur',
           admin: {
             width: '20%',
@@ -338,7 +336,7 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'dateAchat',
               type: 'date',
-              required: true,
+
               label: "Date d'achat",
               admin: {
                 width: '20%',
@@ -348,7 +346,7 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'paysOrigine',
               type: 'text',
-              required: true,
+
               label: "Pays d'origine",
               admin: {
                 width: '20%',
@@ -363,7 +361,7 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'prixAchat',
               type: 'number',
-              required: true,
+
               label: "Prix d'achat",
               admin: {
                 width: '20%',
@@ -374,7 +372,7 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'devise',
               type: 'select',
-              required: true,
+
               label: 'Devise',
               defaultValue: 'XOF',
               admin: {
@@ -471,7 +469,7 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'typeProprietaire',
               type: 'select',
-              required: true,
+
               label: 'Type',
               admin: {
                 width: '20%',
@@ -484,7 +482,7 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'dateAcquisition',
               type: 'date',
-              required: true,
+
               label: "Date d'acquisition",
               admin: {
                 width: '20%',
@@ -498,7 +496,7 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'nom',
               type: 'text',
-              required: true,
+
               label: 'Nom complet / Raison sociale',
               admin: {
                 width: '20%',
@@ -513,7 +511,7 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'ville',
               type: 'text',
-              required: true,
+
               label: 'Ville',
               admin: {
                 width: '20%',
@@ -537,7 +535,7 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'adresse',
               type: 'textarea',
-              required: true,
+
               label: 'Adresse complète',
               admin: {
                 placeholder: 'Rue, quartier, commune...',
@@ -552,7 +550,7 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'telephone',
               type: 'text',
-              required: true,
+
               label: 'Téléphone',
               admin: {
                 width: '20%',
@@ -618,7 +616,7 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'typeChangement',
               type: 'select',
-              required: true,
+
               label: 'Type',
               admin: {
                 width: '20%',
@@ -632,7 +630,7 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'dateChangement',
               type: 'date',
-              required: true,
+
               label: 'Date',
               admin: {
                 width: '20%',
@@ -794,7 +792,7 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'dateInfraction',
               type: 'date',
-              required: true,
+
               label: 'Date',
               admin: {
                 width: '20%',
@@ -812,7 +810,7 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'ville',
               type: 'text',
-              required: true,
+
               label: 'Ville',
               admin: {
                 width: '20%',
@@ -827,7 +825,7 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'lieuInfraction',
               type: 'text',
-              required: true,
+
               label: 'Lieu précis',
               admin: {
                 width: '20%',
@@ -837,7 +835,7 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'typeInfraction',
               type: 'select',
-              required: true,
+
               label: 'Type',
               admin: {
                 width: '20%',
@@ -859,7 +857,7 @@ export const Vehicles: CollectionConfig = {
         {
           name: 'descriptionInfraction',
           type: 'textarea',
-          required: true,
+
           label: 'Description',
           admin: {
             placeholder: "Décrivez les circonstances de l'infraction...",
@@ -872,7 +870,7 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'conducteur',
               type: 'text',
-              required: true,
+
               label: 'Conducteur',
               admin: {
                 width: '20%',
@@ -990,7 +988,7 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'dateVol',
               type: 'date',
-              required: true,
+
               label: 'Date du vol',
               admin: {
                 width: '20%',
@@ -1008,7 +1006,7 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'ville',
               type: 'text',
-              required: true,
+
               label: 'Ville',
               admin: {
                 width: '20%',
@@ -1020,7 +1018,7 @@ export const Vehicles: CollectionConfig = {
         {
           name: 'lieuVol',
           type: 'text',
-          required: true,
+
           label: 'Lieu précis du vol',
           admin: {
             placeholder: 'Adresse exacte où le véhicule a été volé',
@@ -1032,7 +1030,7 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'declarant',
               type: 'text',
-              required: true,
+
               label: 'Déclarant',
               admin: {
                 width: '20%',
@@ -1042,7 +1040,7 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'telephoneDeclarant',
               type: 'text',
-              required: true,
+
               label: 'Téléphone',
               admin: {
                 width: '20%',
@@ -1063,7 +1061,7 @@ export const Vehicles: CollectionConfig = {
         {
           name: 'circonstances',
           type: 'textarea',
-          required: true,
+
           label: 'Circonstances du vol',
           admin: {
             placeholder: "Décrivez en détail comment le vol s'est produit...",
@@ -1138,7 +1136,7 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'dateRecuperation',
               type: 'date',
-              required: true,
+
               label: 'Date',
               admin: {
                 width: '20%',
@@ -1174,7 +1172,7 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'lieuRecuperation',
               type: 'text',
-              required: true,
+
               label: 'Lieu de récupération',
               admin: {
                 width: '20%',
@@ -1184,7 +1182,7 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'recuperePar',
               type: 'text',
-              required: true,
+
               label: 'Récupéré par',
               admin: {
                 width: '20%',

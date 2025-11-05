@@ -176,12 +176,12 @@ export interface Media {
 export interface AvisRecherche {
   id: string;
   vehicule: string | Vehicle;
-  numeroImmatriculation: string;
   typeVehicule: string;
+  numeroImmatriculation: string;
+  numeroSerie?: string | null;
   marque: string;
   modele: string;
   couleur?: string | null;
-  numeroSerie?: string | null;
   dateVol: string;
   ville: string;
   lieuVol: string;
@@ -206,14 +206,14 @@ export interface AvisRecherche {
  */
 export interface Vehicle {
   id: string;
-  typeVehicule: 'voiture' | 'moto' | 'tricycle' | 'camion' | 'engin_agricole' | 'autre';
-  statut: 'actif' | 'vole' | 'retrouve';
-  numeroImmatriculation: string;
-  numeroSerie: string;
-  marque: string;
-  modele: string;
-  annee: number;
-  couleur: string;
+  typeVehicule?: ('voiture' | 'moto' | 'tricycle' | 'camion' | 'engin_agricole' | 'autre') | null;
+  statut?: ('actif' | 'vole' | 'retrouve') | null;
+  numeroImmatriculation?: string | null;
+  numeroSerie?: string | null;
+  marque?: string | null;
+  modele?: string | null;
+  annee?: number | null;
+  couleur?: string | null;
   numeroMoteur?: string | null;
   carburant?: ('essence' | 'diesel' | 'electrique' | 'hybride' | 'gpl' | 'autre') | null;
   /**
@@ -224,13 +224,13 @@ export interface Vehicle {
    * ⚖️ Poids à vide
    */
   poids?: number | null;
-  dateAchat: string;
-  paysOrigine: string;
+  dateAchat?: string | null;
+  paysOrigine?: string | null;
   /**
    * 💵 Montant total
    */
-  prixAchat: number;
-  devise: 'XOF' | 'EUR' | 'USD' | 'autre';
+  prixAchat?: number | null;
+  devise?: ('XOF' | 'EUR' | 'USD' | 'autre') | null;
   vendeur?: string | null;
   numeroFacture?: string | null;
   /**
@@ -243,13 +243,13 @@ export interface Vehicle {
    * Facture, certificat douanier, etc.
    */
   documentImportation?: (string | null) | Media;
-  typeProprietaire: 'physique' | 'morale';
-  dateAcquisition: string;
-  nom: string;
-  ville: string;
+  typeProprietaire?: ('physique' | 'morale') | null;
+  dateAcquisition?: string | null;
+  nom?: string | null;
+  ville?: string | null;
   numeroIdentite?: string | null;
-  adresse: string;
-  telephone: string;
+  adresse?: string | null;
+  telephone?: string | null;
   email?: string | null;
   /**
    * CNI, Passeport ou Registre du Commerce
@@ -260,8 +260,8 @@ export interface Vehicle {
    */
   historiqueChangements?:
     | {
-        typeChangement: 'plaque' | 'proprietaire' | 'les_deux';
-        dateChangement: string;
+        typeChangement?: ('plaque' | 'proprietaire' | 'les_deux') | null;
+        dateChangement?: string | null;
         anciennePlaque?: string | null;
         nouvellePlaque?: string | null;
         ancienProprietaire?: string | null;
@@ -285,22 +285,25 @@ export interface Vehicle {
    */
   infractions?:
     | {
-        dateInfraction: string;
+        dateInfraction?: string | null;
         heureInfraction?: string | null;
-        ville: string;
-        lieuInfraction: string;
-        typeInfraction:
-          | 'exces_vitesse'
-          | 'stationnement'
-          | 'sans_permis'
-          | 'ivresse'
-          | 'feu_rouge'
-          | 'douane'
-          | 'contrebande'
-          | 'documents_falsifies'
-          | 'autre';
-        descriptionInfraction: string;
-        conducteur: string;
+        ville?: string | null;
+        lieuInfraction?: string | null;
+        typeInfraction?:
+          | (
+              | 'exces_vitesse'
+              | 'stationnement'
+              | 'sans_permis'
+              | 'ivresse'
+              | 'feu_rouge'
+              | 'douane'
+              | 'contrebande'
+              | 'documents_falsifies'
+              | 'autre'
+            )
+          | null;
+        descriptionInfraction?: string | null;
+        conducteur?: string | null;
         numeroPermis?: string | null;
         montantAmende?: number | null;
         amendePayee?: boolean | null;
@@ -322,14 +325,14 @@ export interface Vehicle {
    * Détails du vol déclaré
    */
   informationsVol?: {
-    dateVol: string;
+    dateVol?: string | null;
     heureVol?: string | null;
-    ville: string;
-    lieuVol: string;
-    declarant: string;
-    telephoneDeclarant: string;
+    ville?: string | null;
+    lieuVol?: string | null;
+    declarant?: string | null;
+    telephoneDeclarant?: string | null;
     emailDeclarant?: string | null;
-    circonstances: string;
+    circonstances?: string | null;
     numeroPlainte?: string | null;
     documentVol?: (string | null) | Media;
     /**
@@ -345,11 +348,11 @@ export interface Vehicle {
    * Détails de la récupération du véhicule
    */
   informationsRecuperation?: {
-    dateRecuperation: string;
+    dateRecuperation?: string | null;
     heureRecuperation?: string | null;
     etatVehicule?: ('bon' | 'endommage' | 'tres_endommage') | null;
-    lieuRecuperation: string;
-    recuperePar: string;
+    lieuRecuperation?: string | null;
+    recuperePar?: string | null;
     circonstancesRecuperation?: string | null;
     agentRecuperation?: (string | null) | User;
     documentRecuperation?: (string | null) | Media;
@@ -526,12 +529,12 @@ export interface MediaSelect<T extends boolean = true> {
  */
 export interface AvisRechercheSelect<T extends boolean = true> {
   vehicule?: T;
-  numeroImmatriculation?: T;
   typeVehicule?: T;
+  numeroImmatriculation?: T;
+  numeroSerie?: T;
   marque?: T;
   modele?: T;
   couleur?: T;
-  numeroSerie?: T;
   dateVol?: T;
   ville?: T;
   lieuVol?: T;

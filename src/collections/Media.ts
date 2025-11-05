@@ -1,44 +1,32 @@
-import type { CollectionConfig } from 'payload'
+import { CollectionConfig } from 'payload'
 
 export const Media: CollectionConfig = {
   slug: 'media',
-  labels: {
-    singular: 'Média',
-    plural: 'Médias',
-  },
-  upload: {
-    staticDir: 'media',
-    imageSizes: [
-      {
-        name: 'thumbnail',
-        width: 150,
-        height: 150,
-        position: 'centre',
-      },
-      {
-        name: 'card',
-        width: 300,
-        height: 300,
-        position: 'centre',
-      },
-      {
-        name: 'portrait',
-        width: 400,
-        height: 500,
-        position: 'centre',
-      },
-    ],
-    adminThumbnail: 'thumbnail',
-    mimeTypes: ['image/*'],
+  admin: {
+    group: 'Gestion Douanière',
+    description: '📁 Documents et fichiers',
   },
   access: {
     read: () => true,
   },
+  upload: {
+    staticURL: '/media',
+    staticDir: 'media',
+    mimeTypes: [
+      'image/*',
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ],
+  },
   fields: [
     {
       name: 'alt',
-      label: 'Texte alternatif',
       type: 'text',
+      label: 'Texte alternatif',
+      admin: {
+        placeholder: 'Description du document',
+      },
     },
   ],
 }

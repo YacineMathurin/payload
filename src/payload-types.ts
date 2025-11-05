@@ -69,6 +69,7 @@ export interface Config {
   collections: {
     users: User;
     media: Media;
+    'avis-recherche': AvisRecherche;
     people: Person;
     vehicles: Vehicle;
     'payload-kv': PayloadKv;
@@ -80,6 +81,7 @@ export interface Config {
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
+    'avis-recherche': AvisRechercheSelect<false> | AvisRechercheSelect<true>;
     people: PeopleSelect<false> | PeopleSelect<true>;
     vehicles: VehiclesSelect<false> | VehiclesSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
@@ -145,6 +147,8 @@ export interface User {
   password?: string | null;
 }
 /**
+ * 📁 Documents et fichiers
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "media".
  */
@@ -162,32 +166,197 @@ export interface Media {
   height?: number | null;
   focalX?: number | null;
   focalY?: number | null;
-  sizes?: {
-    thumbnail?: {
-      url?: string | null;
-      width?: number | null;
-      height?: number | null;
-      mimeType?: string | null;
-      filesize?: number | null;
-      filename?: string | null;
-    };
-    card?: {
-      url?: string | null;
-      width?: number | null;
-      height?: number | null;
-      mimeType?: string | null;
-      filesize?: number | null;
-      filename?: string | null;
-    };
-    portrait?: {
-      url?: string | null;
-      width?: number | null;
-      height?: number | null;
-      mimeType?: string | null;
-      filesize?: number | null;
-      filename?: string | null;
-    };
+}
+/**
+ * 🔍 Véhicules recherchés
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "avis-recherche".
+ */
+export interface AvisRecherche {
+  id: string;
+  vehicule: string | Vehicle;
+  numeroImmatriculation: string;
+  typeVehicule: string;
+  marque: string;
+  modele: string;
+  couleur?: string | null;
+  numeroSerie?: string | null;
+  dateVol: string;
+  ville: string;
+  lieuVol: string;
+  declarant: string;
+  telephoneDeclarant: string;
+  emailDeclarant?: string | null;
+  circonstances?: string | null;
+  agentEnregistrement?: (string | null) | User;
+  statutRecherche: 'actif' | 'retrouve' | 'abandonne';
+  dateRecuperation?: string | null;
+  lieuRecuperation?: string | null;
+  agentRecuperation?: (string | null) | User;
+  circonstancesRecuperation?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * 🚗 Gestion complète du registre des véhicules
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "vehicles".
+ */
+export interface Vehicle {
+  id: string;
+  typeVehicule: 'voiture' | 'moto' | 'tricycle' | 'camion' | 'engin_agricole' | 'autre';
+  statut: 'actif' | 'vole' | 'retrouve';
+  numeroImmatriculation: string;
+  numeroSerie: string;
+  marque: string;
+  modele: string;
+  annee: number;
+  couleur: string;
+  numeroMoteur?: string | null;
+  carburant?: ('essence' | 'diesel' | 'electrique' | 'hybride' | 'gpl' | 'autre') | null;
+  /**
+   * 🔧 Capacité du moteur
+   */
+  cylindree?: number | null;
+  /**
+   * ⚖️ Poids à vide
+   */
+  poids?: number | null;
+  dateAchat: string;
+  paysOrigine: string;
+  /**
+   * 💵 Montant total
+   */
+  prixAchat: number;
+  devise: 'XOF' | 'EUR' | 'USD' | 'autre';
+  vendeur?: string | null;
+  numeroFacture?: string | null;
+  /**
+   * 📊 Montant payé
+   */
+  droitsDouane?: number | null;
+  taxes?: number | null;
+  fraisImmatriculation?: number | null;
+  /**
+   * Facture, certificat douanier, etc.
+   */
+  documentImportation?: (string | null) | Media;
+  typeProprietaire: 'physique' | 'morale';
+  dateAcquisition: string;
+  nom: string;
+  ville: string;
+  numeroIdentite?: string | null;
+  adresse: string;
+  telephone: string;
+  email?: string | null;
+  /**
+   * CNI, Passeport ou Registre du Commerce
+   */
+  documentProprietaire?: (string | null) | Media;
+  /**
+   * Changements de plaques et de propriétaires
+   */
+  historiqueChangements?:
+    | {
+        typeChangement: 'plaque' | 'proprietaire' | 'les_deux';
+        dateChangement: string;
+        anciennePlaque?: string | null;
+        nouvellePlaque?: string | null;
+        ancienProprietaire?: string | null;
+        nouveauProprietaire?: string | null;
+        motif?: string | null;
+        documentChangement?: (string | null) | Media;
+        agentEnregistrement?: (string | null) | User;
+        /**
+         * Rempli automatiquement
+         */
+        officierSaisie?: (string | null) | User;
+        /**
+         * Rempli automatiquement
+         */
+        dateSaisie?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Infractions commises avec ce véhicule
+   */
+  infractions?:
+    | {
+        dateInfraction: string;
+        heureInfraction?: string | null;
+        ville: string;
+        lieuInfraction: string;
+        typeInfraction:
+          | 'exces_vitesse'
+          | 'stationnement'
+          | 'sans_permis'
+          | 'ivresse'
+          | 'feu_rouge'
+          | 'douane'
+          | 'contrebande'
+          | 'documents_falsifies'
+          | 'autre';
+        descriptionInfraction: string;
+        conducteur: string;
+        numeroPermis?: string | null;
+        montantAmende?: number | null;
+        amendePayee?: boolean | null;
+        numeroPV?: string | null;
+        agentVerbalisant?: (string | null) | User;
+        documentInfraction?: (string | null) | Media;
+        /**
+         * Rempli automatiquement
+         */
+        officierSaisie?: (string | null) | User;
+        /**
+         * Rempli automatiquement
+         */
+        dateSaisie?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Détails du vol déclaré
+   */
+  informationsVol?: {
+    dateVol: string;
+    heureVol?: string | null;
+    ville: string;
+    lieuVol: string;
+    declarant: string;
+    telephoneDeclarant: string;
+    emailDeclarant?: string | null;
+    circonstances: string;
+    numeroPlainte?: string | null;
+    documentVol?: (string | null) | Media;
+    /**
+     * Rempli automatiquement
+     */
+    officierSaisie?: (string | null) | User;
+    /**
+     * Rempli automatiquement
+     */
+    dateSaisie?: string | null;
   };
+  /**
+   * Détails de la récupération du véhicule
+   */
+  informationsRecuperation?: {
+    dateRecuperation: string;
+    heureRecuperation?: string | null;
+    etatVehicule?: ('bon' | 'endommage' | 'tres_endommage') | null;
+    lieuRecuperation: string;
+    recuperePar: string;
+    circonstancesRecuperation?: string | null;
+    agentRecuperation?: (string | null) | User;
+    documentRecuperation?: (string | null) | Media;
+  };
+  notes?: string | null;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * Fichier des personnes et informations d'identification.
@@ -225,83 +394,6 @@ export interface Person {
   createdAt: string;
 }
 /**
- * Gérer les véhicules enregistrés et suivre leur statut de recherche
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "vehicles".
- */
-export interface Vehicle {
-  id: string;
-  /**
-   * Identifiant unique du véhicule
-   */
-  plateNumber: string;
-  /**
-   * Marquez le véhicule comme recherché par la police
-   */
-  underSearch: 'normal' | 'wanted';
-  brand: string;
-  model: string;
-  year: number;
-  color?:
-    | ('white' | 'black' | 'silver' | 'gray' | 'red' | 'blue' | 'green' | 'yellow' | 'orange' | 'brown' | 'other')
-    | null;
-  /**
-   * Numéro d'identification du véhicule
-   */
-  vin?: string | null;
-  /**
-   * Propriétaire principal de ce véhicule
-   */
-  owner: string | Person;
-  /**
-   * Date d'enregistrement du véhicule dans le système
-   */
-  registrationDate?: string | null;
-  /**
-   * Informations concernant la recherche de ce véhicule
-   */
-  searchDetails?: {
-    /**
-     * Officier ayant initié la recherche
-     */
-    declaredBy: string | User;
-    /**
-     * Renseignée automatiquement
-     */
-    declarationDate: string;
-    /**
-     * Niveau d'urgence pour cette recherche
-     */
-    priority: 'high' | 'medium' | 'low';
-    category: 'stolen' | 'crime' | 'traffic' | 'fines' | 'inspection' | 'other';
-    /**
-     * Soyez aussi précis que possible pour la sécurité des officiers
-     */
-    reason: string;
-    lastSeenLocation?: string | null;
-    /**
-     * Indiquez le lieu précis du vol ou de l'incident
-     */
-    stolenLocation?: string | null;
-    /**
-     * Moment estimé du vol ou de l'incident
-     */
-    stolenDate?: string | null;
-    notes?: string | null;
-  };
-  /**
-   * Statut d'immatriculation actuel dans le système
-   */
-  status?: ('active' | 'suspended' | 'deregistered') | null;
-  /**
-   * Ces notes sont visibles uniquement par le personnel autorisé
-   */
-  internalNotes?: string | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
@@ -332,6 +424,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'media';
         value: string | Media;
+      } | null)
+    | ({
+        relationTo: 'avis-recherche';
+        value: string | AvisRecherche;
       } | null)
     | ({
         relationTo: 'people';
@@ -423,40 +519,34 @@ export interface MediaSelect<T extends boolean = true> {
   height?: T;
   focalX?: T;
   focalY?: T;
-  sizes?:
-    | T
-    | {
-        thumbnail?:
-          | T
-          | {
-              url?: T;
-              width?: T;
-              height?: T;
-              mimeType?: T;
-              filesize?: T;
-              filename?: T;
-            };
-        card?:
-          | T
-          | {
-              url?: T;
-              width?: T;
-              height?: T;
-              mimeType?: T;
-              filesize?: T;
-              filename?: T;
-            };
-        portrait?:
-          | T
-          | {
-              url?: T;
-              width?: T;
-              height?: T;
-              mimeType?: T;
-              filesize?: T;
-              filename?: T;
-            };
-      };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "avis-recherche_select".
+ */
+export interface AvisRechercheSelect<T extends boolean = true> {
+  vehicule?: T;
+  numeroImmatriculation?: T;
+  typeVehicule?: T;
+  marque?: T;
+  modele?: T;
+  couleur?: T;
+  numeroSerie?: T;
+  dateVol?: T;
+  ville?: T;
+  lieuVol?: T;
+  declarant?: T;
+  telephoneDeclarant?: T;
+  emailDeclarant?: T;
+  circonstances?: T;
+  agentEnregistrement?: T;
+  statutRecherche?: T;
+  dateRecuperation?: T;
+  lieuRecuperation?: T;
+  agentRecuperation?: T;
+  circonstancesRecuperation?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -486,30 +576,102 @@ export interface PeopleSelect<T extends boolean = true> {
  * via the `definition` "vehicles_select".
  */
 export interface VehiclesSelect<T extends boolean = true> {
-  plateNumber?: T;
-  underSearch?: T;
-  brand?: T;
-  model?: T;
-  year?: T;
-  color?: T;
-  vin?: T;
-  owner?: T;
-  registrationDate?: T;
-  searchDetails?:
+  typeVehicule?: T;
+  statut?: T;
+  numeroImmatriculation?: T;
+  numeroSerie?: T;
+  marque?: T;
+  modele?: T;
+  annee?: T;
+  couleur?: T;
+  numeroMoteur?: T;
+  carburant?: T;
+  cylindree?: T;
+  poids?: T;
+  dateAchat?: T;
+  paysOrigine?: T;
+  prixAchat?: T;
+  devise?: T;
+  vendeur?: T;
+  numeroFacture?: T;
+  droitsDouane?: T;
+  taxes?: T;
+  fraisImmatriculation?: T;
+  documentImportation?: T;
+  typeProprietaire?: T;
+  dateAcquisition?: T;
+  nom?: T;
+  ville?: T;
+  numeroIdentite?: T;
+  adresse?: T;
+  telephone?: T;
+  email?: T;
+  documentProprietaire?: T;
+  historiqueChangements?:
     | T
     | {
-        declaredBy?: T;
-        declarationDate?: T;
-        priority?: T;
-        category?: T;
-        reason?: T;
-        lastSeenLocation?: T;
-        stolenLocation?: T;
-        stolenDate?: T;
-        notes?: T;
+        typeChangement?: T;
+        dateChangement?: T;
+        anciennePlaque?: T;
+        nouvellePlaque?: T;
+        ancienProprietaire?: T;
+        nouveauProprietaire?: T;
+        motif?: T;
+        documentChangement?: T;
+        agentEnregistrement?: T;
+        officierSaisie?: T;
+        dateSaisie?: T;
+        id?: T;
       };
-  status?: T;
-  internalNotes?: T;
+  infractions?:
+    | T
+    | {
+        dateInfraction?: T;
+        heureInfraction?: T;
+        ville?: T;
+        lieuInfraction?: T;
+        typeInfraction?: T;
+        descriptionInfraction?: T;
+        conducteur?: T;
+        numeroPermis?: T;
+        montantAmende?: T;
+        amendePayee?: T;
+        numeroPV?: T;
+        agentVerbalisant?: T;
+        documentInfraction?: T;
+        officierSaisie?: T;
+        dateSaisie?: T;
+        id?: T;
+      };
+  informationsVol?:
+    | T
+    | {
+        dateVol?: T;
+        heureVol?: T;
+        ville?: T;
+        lieuVol?: T;
+        declarant?: T;
+        telephoneDeclarant?: T;
+        emailDeclarant?: T;
+        circonstances?: T;
+        numeroPlainte?: T;
+        documentVol?: T;
+        officierSaisie?: T;
+        dateSaisie?: T;
+      };
+  informationsRecuperation?:
+    | T
+    | {
+        dateRecuperation?: T;
+        heureRecuperation?: T;
+        etatVehicule?: T;
+        lieuRecuperation?: T;
+        recuperePar?: T;
+        circonstancesRecuperation?: T;
+        agentRecuperation?: T;
+        documentRecuperation?: T;
+      };
+  notes?: T;
   updatedAt?: T;
   createdAt?: T;
 }

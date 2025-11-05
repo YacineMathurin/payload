@@ -1,101 +1,358 @@
-// collections/Vehicles.ts
 import { CollectionConfig } from 'payload'
+import { VehicleEditActions } from '../components/VehicleEditActions'
+import { generateVehiclePDF, generateVolPDF } from '../utils/pdf-generators'
+import PDFDocument from 'pdfkit'
 
+// Collection principale des véhicules avec UI améliorée
 export const Vehicles: CollectionConfig = {
   slug: 'vehicles',
-  labels: {
-    singular: 'Véhicule',
-    plural: 'Véhicules',
-  },
   admin: {
-    useAsTitle: 'plateNumber',
-    defaultColumns: ['plateNumber', 'brand', 'model', 'year', 'underSearch'],
-    description: 'Gérer les véhicules enregistrés et suivre leur statut de recherche',
-    group: 'Gestion de Flotte',
-    listSearchableFields: ['plateNumber', 'brand', 'model'],
+    useAsTitle: 'numeroImmatriculation',
+    defaultColumns: ['numeroImmatriculation', 'typeVehicule', 'marque', 'modele', 'statut'],
+    group: 'Gestion Douanière',
+    description: '🚗 Gestion complète du registre des véhicules',
+    components: { BeforeDocument: [VehicleEditActions] } as any,
   },
+  access: {
+    read: () => true,
+    create: () => true,
+    update: () => true,
+    delete: ({ req: { user } }) => user?.role === 'super-admin',
+  },
+  hooks: {
+    beforeChange: [
+      async ({ req, operation, data }) => {
+        if (req.user) {
+          if (operation === 'create') {
+            data.agentEnregistrement = req.user.id
+          }
+          data.dernierAgentModification = req.user.id
+          data.dateDerniereModification = new Date().toISOString()
+        }
+        return data
+      },
+    ],
+    afterChange: [
+      async ({ doc, previousDoc, operation, req }) => {
+        if (
+          doc.statut === 'vole' &&
+          doc.informationsVol &&
+          (!previousDoc || previousDoc.statut !== 'vole')
+        ) {
+          await req.payload.create({
+            collection: 'avis-recherche' as any,
+            data: {
+              vehicule: doc.id,
+              numeroImmatriculation: doc.numeroImmatriculation,
+              typeVehicule: doc.typeVehicule,
+              marque: doc.marque,
+              modele: doc.modele,
+              couleur: doc.couleur,
+              numeroSerie: doc.numeroSerie,
+              dateVol: doc.informationsVol.dateVol,
+              lieuVol: doc.informationsVol.lieuVol,
+              ville: doc.informationsVol.ville,
+              declarant: doc.informationsVol.declarant,
+              telephoneDeclarant: doc.informationsVol.telephoneDeclarant,
+              emailDeclarant: doc.informationsVol.emailDeclarant,
+              circonstances: doc.informationsVol.circonstances,
+              agentEnregistrement: req.user?.id,
+              officierSaisie: doc.informationsVol.officierSaisie, // Copie de l'officier de saisie
+              statutRecherche: 'actif',
+            },
+          })
+        }
+
+        if (doc.informationsRecuperation && !previousDoc?.informationsRecuperation) {
+          const avisRecherche = await req.payload.find({
+            collection: 'avis-recherche' as any,
+            where: {
+              vehicule: { equals: doc.id },
+              statutRecherche: { equals: 'actif' },
+            },
+          })
+
+          if (avisRecherche.docs.length > 0) {
+            await req.payload.update({
+              collection: 'avis-recherche' as any,
+              id: avisRecherche.docs[0].id,
+              data: {
+                statutRecherche: 'retrouve',
+                dateRecuperation: doc.informationsRecuperation.dateRecuperation,
+                lieuRecuperation: doc.informationsRecuperation.lieuRecuperation,
+                agentRecuperation: doc.informationsRecuperation.agentRecuperation,
+                circonstancesRecuperation: doc.informationsRecuperation.circonstancesRecuperation,
+              },
+            })
+          }
+        }
+      },
+    ],
+  },
+  endpoints: [
+    {
+      path: '/generate-pdf/:id',
+      method: 'get',
+      handler: async (req, res) => {
+        try {
+          const vehicleId = req.params.id
+          const vehicle = await req.payload.findByID({
+            collection: 'vehicles',
+            id: vehicleId,
+            depth: 2,
+          })
+
+          if (!vehicle) {
+            return res.status(404).json({ error: 'Véhicule non trouvé' })
+          }
+
+          const doc = new PDFDocument({
+            size: 'A4',
+            margins: { top: 50, bottom: 50, left: 50, right: 50 },
+          })
+
+          res.setHeader('Content-Type', 'application/pdf')
+          res.setHeader(
+            'Content-Disposition',
+            `attachment; filename="fiche-vehicule-${vehicle.numeroImmatriculation}.pdf"`,
+          )
+
+          doc.pipe(res)
+          generateVehiclePDF(doc, vehicle)
+          doc.end()
+        } catch (error) {
+          console.error('Erreur génération PDF:', error)
+          res.status(500).json({ error: 'Erreur lors de la génération du PDF' })
+        }
+      },
+    },
+    {
+      path: '/generate-vol-pdf/:id',
+      method: 'get',
+      handler: async (req, res) => {
+        try {
+          const vehicleId = req.params.id
+          const vehicle = await req.payload.findByID({
+            collection: 'vehicles',
+            id: vehicleId,
+            depth: 2,
+          })
+
+          if (!vehicle || vehicle.statut !== 'vole' || !vehicle.informationsVol) {
+            return res.status(404).json({ error: 'Données de vol manquantes' })
+          }
+
+          const doc = new PDFDocument({
+            size: 'A4',
+            margins: { top: 50, bottom: 50, left: 50, right: 50 },
+          })
+
+          res.setHeader('Content-Type', 'application/pdf')
+          res.setHeader(
+            'Content-Disposition',
+            `attachment; filename="declaration-vol-${vehicle.numeroImmatriculation}.pdf"`,
+          )
+
+          doc.pipe(res)
+          generateVolPDF(doc, vehicle)
+          doc.end()
+        } catch (error) {
+          console.error('Erreur:', error)
+          res.status(500).json({ error: 'Erreur génération PDF' })
+        }
+      },
+    },
+  ],
   fields: [
-    // Vehicle Identification
+    // === SECTION: INFORMATIONS GÉNÉRALES ===
     {
       type: 'row',
       fields: [
         {
-          name: 'plateNumber',
+          name: 'typeVehicule',
+          type: 'select',
+          required: true,
+          label: 'Type de véhicule',
+          admin: {
+            width: '20%',
+            placeholder: 'Sélectionnez le type',
+          },
+          options: [
+            { label: '🚗 Voiture', value: 'voiture' },
+            { label: '🏍️ Moto', value: 'moto' },
+            { label: '🛺 Tricycle', value: 'tricycle' },
+            { label: '🚚 Camion', value: 'camion' },
+            { label: '🚜 Engin agricole', value: 'engin_agricole' },
+            { label: '🔧 Autre', value: 'autre' },
+          ],
+        },
+        {
+          name: 'statut',
+          type: 'select',
+          required: true,
+          label: 'Statut du véhicule',
+          defaultValue: 'actif',
+          admin: {
+            width: '20%',
+            placeholder: 'Statut actuel',
+          },
+          options: [
+            { label: '✅ Actif', value: 'actif' },
+            { label: '🚨 Volé', value: 'vole' },
+            { label: '🔍 Retrouvé', value: 'retrouve' },
+          ],
+        },
+      ],
+    },
+    {
+      type: 'row',
+      fields: [
+        {
+          name: 'numeroImmatriculation',
           type: 'text',
           required: true,
           unique: true,
-          label: "Numéro de Plaque d'Immatriculation",
+          label: "Numéro d'immatriculation",
           admin: {
-            placeholder: 'AA-123-BB',
-            width: '50%',
-            description: 'Identifiant unique du véhicule',
-          },
-          validate: (value) => {
-            if (!value) return "La plaque d'immatriculation est requise"
-            // Optional: Add regex validation for specific plate format
-            if (!/^[A-Z]{2}-\d{3}-[A-Z]{2}$/i.test(value)) {
-              return 'Veuillez utiliser le format : AA-123-BB'
-            }
-            return true
+            width: '20%',
+            placeholder: 'Ex: AB-1234-CD',
           },
         },
         {
-          name: 'underSearch',
-          type: 'radio',
-          label: '🚨 Statut de Recherche Police',
+          name: 'numeroSerie',
+          type: 'text',
           required: true,
-          defaultValue: 'normal',
-          options: [
-            {
-              label: '✓ Normal - Aucune alerte',
-              value: 'normal',
-            },
-            {
-              label: '⚠️ SOUS RECHERCHE POLICE',
-              value: 'wanted',
-            },
-          ],
+          unique: true,
+          label: 'Numéro de série (VIN/Châssis)',
           admin: {
-            width: '50%',
-            layout: 'horizontal',
-            description: 'Marquez le véhicule comme recherché par la police',
-            style: {
-              fontWeight: 'bold',
-            },
+            width: '20%',
+            placeholder: 'Ex: 1HGBH41JXMN109186',
+          },
+        },
+        {
+          name: 'marque',
+          type: 'text',
+          required: true,
+          label: 'Marque',
+          admin: {
+            width: '20%',
+            placeholder: 'Ex: Toyota, Honda...',
+          },
+        },
+        {
+          name: 'modele',
+          type: 'text',
+          required: true,
+          label: 'Modèle',
+          admin: {
+            width: '20%',
+            placeholder: 'Ex: Corolla, Civic...',
+          },
+        },
+        {
+          name: 'annee',
+          type: 'number',
+          required: true,
+          label: 'Année de fabrication',
+          admin: {
+            width: '20%',
+            placeholder: '2020',
           },
         },
       ],
     },
 
-    // Vehicle Details
+    {
+      type: 'row',
+      fields: [
+        {
+          name: 'couleur',
+          type: 'text',
+          required: true,
+          label: 'Couleur',
+          admin: {
+            width: '20%',
+            placeholder: 'Blanc, Noir, Gris...',
+          },
+        },
+        {
+          name: 'numeroMoteur',
+          type: 'text',
+          label: 'Numéro de moteur',
+          admin: {
+            width: '20%',
+            placeholder: 'Ex: 4G63-123456',
+          },
+        },
+        {
+          name: 'carburant',
+          type: 'select',
+          label: 'Type de carburant',
+          admin: {
+            width: '20%',
+            placeholder: 'Sélectionnez',
+          },
+          options: [
+            { label: '⛽ Essence', value: 'essence' },
+            { label: '🛢️ Diesel', value: 'diesel' },
+            { label: '🔋 Électrique', value: 'electrique' },
+            { label: '🔋⛽ Hybride', value: 'hybride' },
+            { label: '🌱 GPL', value: 'gpl' },
+            { label: 'Autre', value: 'autre' },
+          ],
+        },
+        {
+          name: 'cylindree',
+          type: 'number',
+          label: 'Cylindrée (cm³)',
+          admin: {
+            width: '20%',
+            placeholder: '1600',
+            description: '🔧 Capacité du moteur',
+          },
+        },
+        {
+          name: 'poids',
+          type: 'number',
+          label: 'Poids (kg)',
+          admin: {
+            width: '20%',
+            placeholder: '1200',
+            description: '⚖️ Poids à vide',
+          },
+        },
+      ],
+    },
+
+    // === SECTION: INFORMATIONS D'ACHAT (Collapsible) ===
     {
       type: 'collapsible',
-      label: '🚗 Informations du Véhicule',
+      label: "💰 Informations d'achat",
       admin: {
-        initCollapsed: false,
+        description: 'Détails financiers et origine du véhicule',
       },
       fields: [
         {
           type: 'row',
           fields: [
             {
-              name: 'brand',
-              type: 'text',
+              name: 'dateAchat',
+              type: 'date',
               required: true,
-              label: 'Marque / Constructeur',
+              label: "Date d'achat",
               admin: {
-                placeholder: 'Toyota, Ford, BMW...',
-                width: '50%',
+                width: '20%',
+                placeholder: 'Sélectionnez la date',
               },
             },
             {
-              name: 'model',
+              name: 'paysOrigine',
               type: 'text',
               required: true,
-              label: 'Modèle',
+              label: "Pays d'origine",
               admin: {
-                placeholder: 'Corolla, F-150, X5...',
-                width: '50%',
+                width: '20%',
+                placeholder: 'Ex: France, Japon, USA...',
               },
             },
           ],
@@ -104,335 +361,884 @@ export const Vehicles: CollectionConfig = {
           type: 'row',
           fields: [
             {
-              name: 'year',
+              name: 'prixAchat',
               type: 'number',
               required: true,
-              label: 'Année de Fabrication',
+              label: "Prix d'achat",
               admin: {
-                placeholder: '2021',
-                width: '33%',
-                step: 1,
-              },
-              validate: (value) => {
-                const currentYear = new Date().getFullYear()
-                if (value < 1900 || value > currentYear + 1) {
-                  return `L'année doit être entre 1900 et ${currentYear + 1}`
-                }
-                return true
+                width: '20%',
+                placeholder: '5000000',
+                description: '💵 Montant total',
               },
             },
             {
-              name: 'color',
+              name: 'devise',
               type: 'select',
-              label: 'Couleur Principale',
+              required: true,
+              label: 'Devise',
+              defaultValue: 'XOF',
               admin: {
-                width: '33%',
+                width: '20%',
               },
               options: [
-                { label: 'Blanc', value: 'white' },
-                { label: 'Noir', value: 'black' },
-                { label: 'Argent', value: 'silver' },
-                { label: 'Gris', value: 'gray' },
-                { label: 'Rouge', value: 'red' },
-                { label: 'Bleu', value: 'blue' },
-                { label: 'Vert', value: 'green' },
-                { label: 'Jaune', value: 'yellow' },
-                { label: 'Orange', value: 'orange' },
-                { label: 'Marron', value: 'brown' },
-                { label: 'Autre', value: 'other' },
+                { label: 'Franc CFA (XOF)', value: 'XOF' },
+                { label: 'Euro (EUR)', value: 'EUR' },
+                { label: 'Dollar US (USD)', value: 'USD' },
+                { label: 'Autre', value: 'autre' },
+              ],
+            },
+          ],
+        },
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'vendeur',
+              type: 'text',
+              label: 'Nom du vendeur',
+              admin: {
+                width: '20%',
+                placeholder: 'Nom complet ou raison sociale',
+              },
+            },
+            {
+              name: 'numeroFacture',
+              type: 'text',
+              label: 'Numéro de facture',
+              admin: {
+                width: '20%',
+                placeholder: 'Ex: INV-2024-001',
+              },
+            },
+          ],
+        },
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'droitsDouane',
+              type: 'number',
+              label: 'Droits de douane',
+              admin: {
+                width: '20%',
+                placeholder: '500000',
+                description: '📊 Montant payé',
+              },
+            },
+            {
+              name: 'taxes',
+              type: 'number',
+              label: 'Taxes',
+              admin: {
+                width: '20%',
+                placeholder: '300000',
+              },
+            },
+            {
+              name: 'fraisImmatriculation',
+              type: 'number',
+              label: "Frais d'immatriculation",
+              admin: {
+                width: '20%',
+                placeholder: '50000',
+              },
+            },
+          ],
+        },
+        {
+          name: 'documentImportation',
+          type: 'upload',
+          relationTo: 'media',
+          label: "📎 Document d'importation",
+          admin: {
+            description: 'Facture, certificat douanier, etc.',
+          },
+        },
+      ],
+    },
+
+    // === SECTION: PROPRIÉTAIRE ACTUEL (Collapsible) ===
+    {
+      type: 'collapsible',
+      label: '👤 Propriétaire actuel',
+      admin: {
+        description: 'Informations sur le propriétaire enregistré',
+      },
+      fields: [
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'typeProprietaire',
+              type: 'select',
+              required: true,
+              label: 'Type',
+              admin: {
+                width: '20%',
+              },
+              options: [
+                { label: '👤 Personne physique', value: 'physique' },
+                { label: '🏢 Personne morale (entreprise)', value: 'morale' },
               ],
             },
             {
-              name: 'vin',
-              type: 'text',
-              label: 'Numéro VIN',
+              name: 'dateAcquisition',
+              type: 'date',
+              required: true,
+              label: "Date d'acquisition",
               admin: {
-                placeholder: 'VIN à 17 caractères',
-                width: '34%',
-                description: "Numéro d'identification du véhicule",
-              },
-              validate: (value) => {
-                if (value && value.length !== 17) {
-                  return 'Le VIN doit contenir exactement 17 caractères'
-                }
-                return true
+                width: '20%',
               },
             },
           ],
         },
-      ],
-    },
-
-    // Owner Information
-    {
-      type: 'collapsible',
-      label: '👤 Informations du Propriétaire',
-      admin: {
-        initCollapsed: false,
-      },
-      fields: [
         {
-          name: 'owner',
-          type: 'relationship',
-          relationTo: 'people',
-          required: true,
-          label: 'Propriétaire Enregistré',
-          admin: {
-            description: 'Propriétaire principal de ce véhicule',
-          },
-        },
-        {
-          name: 'registrationDate',
-          type: 'date',
-          label: "Date d'Enregistrement",
-          admin: {
-            date: {
-              pickerAppearance: 'dayAndTime',
-              displayFormat: 'd MMM yyyy',
+          type: 'row',
+          fields: [
+            {
+              name: 'nom',
+              type: 'text',
+              required: true,
+              label: 'Nom complet / Raison sociale',
+              admin: {
+                width: '20%',
+                placeholder: 'Ex: Kouassi Jean-Pierre ou SARL TransAfrique',
+              },
             },
-            description: "Date d'enregistrement du véhicule dans le système",
+          ],
+        },
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'ville',
+              type: 'text',
+              required: true,
+              label: 'Ville',
+              admin: {
+                width: '20%',
+                placeholder: 'Ex: Abidjan, Bouaké...',
+              },
+            },
+            {
+              name: 'numeroIdentite',
+              type: 'text',
+              label: 'N° CNI / Passeport / RC',
+              admin: {
+                width: '20%',
+                placeholder: 'Ex: CI-123456789',
+              },
+            },
+          ],
+        },
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'adresse',
+              type: 'textarea',
+              required: true,
+              label: 'Adresse complète',
+              admin: {
+                placeholder: 'Rue, quartier, commune...',
+                width: '40%',
+              },
+            },
+          ],
+        },
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'telephone',
+              type: 'text',
+              required: true,
+              label: 'Téléphone',
+              admin: {
+                width: '20%',
+                placeholder: '+225 XX XX XX XX XX',
+              },
+            },
+            {
+              name: 'email',
+              type: 'email',
+              label: 'Email',
+              admin: {
+                width: '20%',
+                placeholder: 'exemple@email.com',
+              },
+            },
+          ],
+        },
+        {
+          name: 'documentProprietaire',
+          type: 'upload',
+          relationTo: 'media',
+          label: "📎 Document d'identité",
+          admin: {
+            description: 'CNI, Passeport ou Registre du Commerce',
           },
         },
       ],
     },
 
-    // Search Details (Conditional)
+    // === SECTION: HISTORIQUE DES CHANGEMENTS (Collapsible) ===
     {
-      name: 'searchDetails',
-      type: 'group',
-      label: '🚨 Détails de la Recherche / Incident',
+      name: 'historiqueChangements',
+      type: 'array',
+      label: '📜 Historique des changements',
       admin: {
-        condition: (data) => data.underSearch === 'wanted',
-        description: 'Informations concernant la recherche de ce véhicule',
+        description: 'Changements de plaques et de propriétaires',
+        initCollapsed: true,
+      },
+      hooks: {
+        beforeChange: [
+          async ({ req, operation, data, value }) => {
+            if (req.user && value && Array.isArray(value)) {
+              // Pour chaque élément du tableau, si c'est nouveau ou modifié
+              return value.map((item: any) => {
+                if (!item.officierSaisie) {
+                  return {
+                    ...item,
+                    officierSaisie: req.user?.id,
+                    dateSaisie: new Date().toISOString(),
+                  }
+                }
+                return item
+              })
+            }
+            return value
+          },
+        ],
       },
       fields: [
         {
           type: 'row',
           fields: [
             {
-              name: 'declaredBy',
-              type: 'relationship',
-              relationTo: 'users',
-              label: 'Déclaré Par (Officier)',
+              name: 'typeChangement',
+              type: 'select',
               required: true,
+              label: 'Type',
               admin: {
-                width: '50%',
-                description: 'Officier ayant initié la recherche',
-                readOnly: true,
+                width: '20%',
+              },
+              options: [
+                { label: '🔖 Changement de plaque', value: 'plaque' },
+                { label: '👤 Changement de propriétaire', value: 'proprietaire' },
+                { label: '🔄 Les deux', value: 'les_deux' },
+              ],
+            },
+            {
+              name: 'dateChangement',
+              type: 'date',
+              required: true,
+              label: 'Date',
+              admin: {
+                width: '20%',
+              },
+            },
+          ],
+        },
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'anciennePlaque',
+              type: 'text',
+              label: 'Ancienne plaque',
+              admin: {
+                width: '20%',
+                placeholder: 'Ex: AA-1111-BB',
+                condition: (data, siblingData) =>
+                  siblingData.typeChangement === 'plaque' ||
+                  siblingData.typeChangement === 'les_deux',
               },
             },
             {
-              name: 'declarationDate',
-              type: 'date',
-              label: 'Date de Déclaration',
-              required: true,
+              name: 'nouvellePlaque',
+              type: 'text',
+              label: 'Nouvelle plaque',
               admin: {
-                width: '50%',
-                readOnly: true,
-                date: {
-                  pickerAppearance: 'dayAndTime',
-                  displayFormat: 'd MMM yyyy HH:mm',
-                },
-                description: 'Renseignée automatiquement',
+                width: '20%',
+                placeholder: 'Ex: CC-2222-DD',
+                condition: (data, siblingData) =>
+                  siblingData.typeChangement === 'plaque' ||
+                  siblingData.typeChangement === 'les_deux',
               },
             },
           ],
         },
         {
-          name: 'priority',
-          type: 'radio',
-          label: 'Niveau de Priorité',
-          required: true,
-          defaultValue: 'medium',
-          options: [
-            { label: '🔴 HAUTE - Action Immédiate Requise', value: 'high' },
-            { label: '🟡 MOYENNE - Surveillance Rapprochée', value: 'medium' },
-            { label: '🟢 BASSE - Contrôle de Routine', value: 'low' },
+          type: 'row',
+          fields: [
+            {
+              name: 'ancienProprietaire',
+              type: 'text',
+              label: 'Ancien propriétaire',
+              admin: {
+                width: '20%',
+                placeholder: 'Nom complet',
+                condition: (data, siblingData) =>
+                  siblingData.typeChangement === 'proprietaire' ||
+                  siblingData.typeChangement === 'les_deux',
+              },
+            },
+            {
+              name: 'nouveauProprietaire',
+              type: 'text',
+              label: 'Nouveau propriétaire',
+              admin: {
+                width: '20%',
+                placeholder: 'Nom complet',
+                condition: (data, siblingData) =>
+                  siblingData.typeChangement === 'proprietaire' ||
+                  siblingData.typeChangement === 'les_deux',
+              },
+            },
           ],
+        },
+        {
+          name: 'motif',
+          type: 'textarea',
+          label: 'Motif du changement',
           admin: {
-            layout: 'vertical',
-            description: "Niveau d'urgence pour cette recherche",
+            placeholder: 'Décrivez la raison du changement...',
+            rows: 2,
           },
         },
         {
-          name: 'category',
-          type: 'select',
-          label: 'Catégorie de Recherche',
-          required: true,
-          options: [
-            { label: '🚗 Véhicule Volé', value: 'stolen' },
-            { label: '⚖️ Implication Criminelle', value: 'crime' },
-            { label: '🚦 Infraction Routière', value: 'traffic' },
-            { label: '💰 Amendes Impayées', value: 'fines' },
-            { label: '🔍 Inspection Requise', value: 'inspection' },
-            { label: '📋 Autre', value: 'other' },
+          type: 'row',
+          fields: [
+            {
+              name: 'documentChangement',
+              type: 'upload',
+              relationTo: 'media',
+              label: '📎 Document justificatif',
+              admin: {
+                width: '20%',
+              },
+            },
+            {
+              name: 'agentEnregistrement',
+              type: 'relationship',
+              relationTo: 'users',
+              label: 'Agent enregistrant',
+              admin: {
+                width: '20%',
+              },
+            },
           ],
         },
         {
-          name: 'reason',
-          type: 'textarea',
-          label: 'Raison Détaillée / Description',
-          required: true,
-          admin: {
-            placeholder:
-              "Fournissez une description détaillée de la raison de cette recherche, incluant les numéros d'incident, lieux, ou autres informations pertinentes...",
-            rows: 5,
-            description: 'Soyez aussi précis que possible pour la sécurité des officiers',
-          },
-          validate: (value) => {
-            if (value && value.length < 20) {
-              return 'Veuillez fournir une description plus détaillée (minimum 20 caractères)'
-            }
-            return true
-          },
-        },
-        {
-          name: 'lastSeenLocation',
-          type: 'text',
-          label: 'Dernière Localisation Connue',
-          admin: {
-            placeholder: 'Adresse, intersection, ou description du secteur',
-          },
-        },
-        {
-          name: 'stolenLocation',
-          type: 'text',
-          label: 'Lieu du Vol / Incident',
-          required: true,
-          admin: {
-            placeholder: 'Adresse exacte ou secteur où le véhicule a été volé',
-            description: "Indiquez le lieu précis du vol ou de l'incident",
-            condition: (data, siblingData) => {
-              return siblingData?.category === 'stolen' || siblingData?.category === 'crime'
+          type: 'row',
+          fields: [
+            {
+              name: 'officierSaisie',
+              type: 'relationship',
+              relationTo: 'users',
+              label: '👮 Officier de saisie',
+              admin: {
+                width: '20%',
+                readOnly: true,
+                description: 'Rempli automatiquement',
+              },
             },
-          },
-        },
-        {
-          name: 'stolenDate',
-          type: 'date',
-          label: 'Date et Heure du Vol / Incident',
-          required: true,
-          admin: {
-            date: {
-              pickerAppearance: 'dayAndTime',
-              displayFormat: 'd MMM yyyy HH:mm',
+            {
+              name: 'dateSaisie',
+              type: 'date',
+              label: '📅 Date de saisie',
+              admin: {
+                width: '20%',
+                readOnly: true,
+                description: 'Rempli automatiquement',
+              },
             },
-            description: "Moment estimé du vol ou de l'incident",
-            condition: (data, siblingData) => {
-              return siblingData?.category === 'stolen' || siblingData?.category === 'crime'
-            },
-          },
-        },
-        {
-          name: 'notes',
-          type: 'textarea',
-          label: 'Notes Additionnelles / Mises à Jour',
-          admin: {
-            placeholder:
-              'Toute information supplémentaire ou mise à jour concernant cette affaire...',
-            rows: 3,
-          },
+          ],
         },
       ],
     },
 
-    // System Metadata
+    // === SECTION: INFRACTIONS (Collapsible) ===
     {
-      type: 'collapsible',
-      label: '⚙️ Informations Système',
+      name: 'infractions',
+      type: 'array',
+      label: '⚠️ Infractions',
       admin: {
+        description: 'Infractions commises avec ce véhicule',
         initCollapsed: true,
+      },
+      hooks: {
+        beforeChange: [
+          async ({ req, operation, data, value }) => {
+            if (req.user && value && Array.isArray(value)) {
+              return value.map((item: any) => {
+                if (!item.officierSaisie) {
+                  return {
+                    ...item,
+                    officierSaisie: req?.user?.id,
+                    dateSaisie: new Date().toISOString(),
+                  }
+                }
+                return item
+              })
+            }
+            return value
+          },
+        ],
       },
       fields: [
         {
-          name: 'status',
-          type: 'select',
-          label: "Statut d'Immatriculation",
-          defaultValue: 'active',
-          options: [
-            { label: '✓ Actif', value: 'active' },
-            { label: '⊗ Suspendu', value: 'suspended' },
-            { label: '✕ Radié', value: 'deregistered' },
+          type: 'row',
+          fields: [
+            {
+              name: 'dateInfraction',
+              type: 'date',
+              required: true,
+              label: 'Date',
+              admin: {
+                width: '20%',
+              },
+            },
+            {
+              name: 'heureInfraction',
+              type: 'text',
+              label: 'Heure',
+              admin: {
+                width: '20%',
+                placeholder: '14:30',
+              },
+            },
+            {
+              name: 'ville',
+              type: 'text',
+              required: true,
+              label: 'Ville',
+              admin: {
+                width: '20%',
+                placeholder: 'Abidjan',
+              },
+            },
           ],
+        },
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'lieuInfraction',
+              type: 'text',
+              required: true,
+              label: 'Lieu précis',
+              admin: {
+                width: '20%',
+                placeholder: 'Ex: Boulevard Latrille, Cocody',
+              },
+            },
+            {
+              name: 'typeInfraction',
+              type: 'select',
+              required: true,
+              label: 'Type',
+              admin: {
+                width: '20%',
+              },
+              options: [
+                { label: '🚀 Excès de vitesse', value: 'exces_vitesse' },
+                { label: '🅿️ Stationnement interdit', value: 'stationnement' },
+                { label: '🪪 Conduite sans permis', value: 'sans_permis' },
+                { label: "🍺 État d'ivresse", value: 'ivresse' },
+                { label: '🚦 Non respect feu rouge', value: 'feu_rouge' },
+                { label: '🛃 Problème douanier', value: 'douane' },
+                { label: '📦 Contrebande', value: 'contrebande' },
+                { label: '📄 Documents falsifiés', value: 'documents_falsifies' },
+                { label: 'Autre', value: 'autre' },
+              ],
+            },
+          ],
+        },
+        {
+          name: 'descriptionInfraction',
+          type: 'textarea',
+          required: true,
+          label: 'Description',
           admin: {
-            description: "Statut d'immatriculation actuel dans le système",
+            placeholder: "Décrivez les circonstances de l'infraction...",
+            rows: 3,
           },
         },
         {
-          name: 'internalNotes',
-          type: 'textarea',
-          label: 'Notes Internes',
-          admin: {
-            placeholder: 'Notes à usage interne uniquement...',
-            rows: 3,
-            description: 'Ces notes sont visibles uniquement par le personnel autorisé',
-          },
+          type: 'row',
+          fields: [
+            {
+              name: 'conducteur',
+              type: 'text',
+              required: true,
+              label: 'Conducteur',
+              admin: {
+                width: '20%',
+                placeholder: 'Nom complet',
+              },
+            },
+            {
+              name: 'numeroPermis',
+              type: 'text',
+              label: 'N° Permis',
+              admin: {
+                width: '20%',
+                placeholder: 'Ex: PC-123456',
+              },
+            },
+          ],
+        },
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'montantAmende',
+              type: 'number',
+              label: 'Montant amende',
+              admin: {
+                width: '20%',
+                placeholder: '25000',
+              },
+            },
+            {
+              name: 'amendePayee',
+              type: 'checkbox',
+              label: '✅ Payée',
+              defaultValue: false,
+              admin: {
+                width: '20%',
+              },
+            },
+            {
+              name: 'numeroPV',
+              type: 'text',
+              label: 'N° PV',
+              admin: {
+                width: '20%',
+                placeholder: 'PV-2024-001',
+              },
+            },
+          ],
+        },
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'agentVerbalisant',
+              type: 'relationship',
+              relationTo: 'users',
+              label: 'Agent verbalisant',
+              admin: {
+                width: '20%',
+              },
+            },
+            {
+              name: 'documentInfraction',
+              type: 'upload',
+              relationTo: 'media',
+              label: '📎 Document (PV, photo)',
+              admin: {
+                width: '20%',
+              },
+            },
+          ],
+        },
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'officierSaisie',
+              type: 'relationship',
+              relationTo: 'users',
+              label: '👮 Officier de saisie',
+              admin: {
+                width: '20%',
+                readOnly: true,
+                description: 'Rempli automatiquement',
+              },
+            },
+            {
+              name: 'dateSaisie',
+              type: 'date',
+              label: '📅 Date de saisie',
+              admin: {
+                width: '20%',
+                readOnly: true,
+                description: 'Rempli automatiquement',
+              },
+            },
+          ],
         },
       ],
     },
-  ],
 
-  hooks: {
-    beforeChange: [
-      ({ req, data, operation }) => {
-        // Auto-populate search details when marking vehicle as under search
-        if (data.underSearch === 'wanted' && req.user) {
-          if (!data.searchDetails) {
-            data.searchDetails = {}
-          }
-
-          // ALWAYS set the current user as declaring officer
-          data.searchDetails.declaredBy = req.user.id
-
-          // Set declaration date if not already set (only on first declaration)
-          if (!data.searchDetails.declarationDate) {
-            data.searchDetails.declarationDate = new Date().toISOString()
-          }
-        }
-
-        // Clear search details if underSearch is set to normal
-        if (data.underSearch === 'normal' && data.searchDetails) {
-          data.searchDetails = undefined
-        }
-
-        // Normalize plate number format
-        if (data.plateNumber) {
-          data.plateNumber = data.plateNumber.toUpperCase().trim()
-        }
-
-        // Set registration date on creation
-        if (operation === 'create' && !data.registrationDate) {
-          data.registrationDate = new Date().toISOString()
-        }
-
-        return data
+    // === SECTION: INFORMATIONS DE VOL (Conditional) ===
+    {
+      name: 'informationsVol',
+      type: 'group',
+      label: '🚨 Informations sur le vol',
+      admin: {
+        condition: (data) => data.statut === 'vole',
+        description: 'Détails du vol déclaré',
       },
-    ],
-    beforeValidate: [
-      ({ req, data }) => {
-        // Ensure declaredBy is set before validation
-        if (data.underSearch === 'wanted' && req.user) {
-          if (!data.searchDetails) {
-            data.searchDetails = {}
-          }
-          data.searchDetails.declaredBy = req.user.id
-        }
-        return data
-      },
-    ],
-  },
-
-  // Add timestamps
-  timestamps: true,
-
-  // Access control (customize based on your needs)
-  access: {
-    read: () => true,
-    create: ({ req: { user } }) => !!user,
-    update: ({ req: { user } }) => !!user,
-    delete: ({ req: { user } }) => {
-      // Only admins can delete vehicles
-      return user?.role === 'super-admin'
+      fields: [
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'dateVol',
+              type: 'date',
+              required: true,
+              label: 'Date du vol',
+              admin: {
+                width: '20%',
+              },
+            },
+            {
+              name: 'heureVol',
+              type: 'text',
+              label: 'Heure',
+              admin: {
+                width: '20%',
+                placeholder: '02:30',
+              },
+            },
+            {
+              name: 'ville',
+              type: 'text',
+              required: true,
+              label: 'Ville',
+              admin: {
+                width: '20%',
+                placeholder: 'Abidjan',
+              },
+            },
+          ],
+        },
+        {
+          name: 'lieuVol',
+          type: 'text',
+          required: true,
+          label: 'Lieu précis du vol',
+          admin: {
+            placeholder: 'Adresse exacte où le véhicule a été volé',
+          },
+        },
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'declarant',
+              type: 'text',
+              required: true,
+              label: 'Déclarant',
+              admin: {
+                width: '20%',
+                placeholder: 'Nom complet',
+              },
+            },
+            {
+              name: 'telephoneDeclarant',
+              type: 'text',
+              required: true,
+              label: 'Téléphone',
+              admin: {
+                width: '20%',
+                placeholder: '+225 XX XX XX XX XX',
+              },
+            },
+            {
+              name: 'emailDeclarant',
+              type: 'email',
+              label: 'Email',
+              admin: {
+                width: '20%',
+                placeholder: 'exemple@email.com',
+              },
+            },
+          ],
+        },
+        {
+          name: 'circonstances',
+          type: 'textarea',
+          required: true,
+          label: 'Circonstances du vol',
+          admin: {
+            placeholder: "Décrivez en détail comment le vol s'est produit...",
+            rows: 4,
+          },
+        },
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'numeroPlainte',
+              type: 'text',
+              label: 'N° Plainte',
+              admin: {
+                width: '20%',
+                placeholder: 'Ex: PL-2024-001',
+              },
+            },
+            {
+              name: 'documentVol',
+              type: 'upload',
+              relationTo: 'media',
+              label: '📎 Récépissé de plainte',
+              admin: {
+                width: '20%',
+              },
+            },
+          ],
+        },
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'officierSaisie',
+              type: 'relationship',
+              relationTo: 'users',
+              label: '👮 Officier de saisie',
+              admin: {
+                width: '20%',
+                readOnly: true,
+                description: 'Rempli automatiquement',
+              },
+            },
+            {
+              name: 'dateSaisie',
+              type: 'date',
+              label: '📅 Date de saisie',
+              admin: {
+                width: '20%',
+                readOnly: true,
+                description: 'Rempli automatiquement',
+              },
+            },
+          ],
+        },
+      ],
     },
+
+    // === SECTION: INFORMATIONS DE RÉCUPÉRATION (Conditional) ===
+    {
+      name: 'informationsRecuperation',
+      type: 'group',
+      label: '🔍 Informations sur la récupération',
+      admin: {
+        condition: (data) => data.statut === 'retrouve',
+        description: 'Détails de la récupération du véhicule',
+      },
+      fields: [
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'dateRecuperation',
+              type: 'date',
+              required: true,
+              label: 'Date',
+              admin: {
+                width: '20%',
+              },
+            },
+            {
+              name: 'heureRecuperation',
+              type: 'text',
+              label: 'Heure',
+              admin: {
+                width: '20%',
+                placeholder: '15:45',
+              },
+            },
+            {
+              name: 'etatVehicule',
+              type: 'select',
+              label: 'État',
+              admin: {
+                width: '20%',
+              },
+              options: [
+                { label: '✅ Bon état', value: 'bon' },
+                { label: '⚠️ Endommagé', value: 'endommage' },
+                { label: '❌ Très endommagé', value: 'tres_endommage' },
+              ],
+            },
+          ],
+        },
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'lieuRecuperation',
+              type: 'text',
+              required: true,
+              label: 'Lieu de récupération',
+              admin: {
+                width: '20%',
+                placeholder: 'Adresse exacte',
+              },
+            },
+            {
+              name: 'recuperePar',
+              type: 'text',
+              required: true,
+              label: 'Récupéré par',
+              admin: {
+                width: '20%',
+                placeholder: 'Nom complet',
+              },
+            },
+          ],
+        },
+        {
+          name: 'circonstancesRecuperation',
+          type: 'textarea',
+          label: 'Circonstances',
+          admin: {
+            placeholder: 'Comment le véhicule a-t-il été retrouvé ?',
+            rows: 4,
+          },
+        },
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'agentRecuperation',
+              type: 'relationship',
+              relationTo: 'users',
+              label: 'Agent enregistrant',
+              admin: {
+                width: '20%',
+              },
+            },
+            {
+              name: 'documentRecuperation',
+              type: 'upload',
+              relationTo: 'media',
+              label: '📎 Document',
+              admin: {
+                width: '20%',
+              },
+            },
+          ],
+        },
+      ],
+    },
+
+    {
+      name: 'notes',
+      type: 'textarea',
+      label: '📝 Notes additionnelles',
+      admin: {
+        placeholder: 'Ajoutez des remarques particulières sur ce véhicule...',
+        rows: 5,
+      },
+    },
+  ],
+  versions: {
+    maxPerDoc: 50,
   },
 }

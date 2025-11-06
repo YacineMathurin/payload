@@ -138,7 +138,7 @@ export const Vehicles: CollectionConfig = {
       method: 'get',
       handler: async (req) => {
         try {
-          const vehicleId = req.routeParams?.id
+          const vehicleId = req.routeParams?.id as string
 
           if (!vehicleId) {
             return new Response(JSON.stringify({ error: 'ID manquant' }), {
@@ -160,7 +160,7 @@ export const Vehicles: CollectionConfig = {
             })
           }
 
-          const pdfBytes = await generateVehiclePDF(vehicle)
+          const pdfBytes = (await generateVehiclePDF(vehicle)) as any
 
           return new Response(pdfBytes, {
             status: 200,
@@ -189,7 +189,7 @@ export const Vehicles: CollectionConfig = {
       method: 'get',
       handler: async (req) => {
         try {
-          const vehicleId = req.routeParams?.id
+          const vehicleId = req.routeParams?.id as string
 
           if (!vehicleId) {
             return new Response(JSON.stringify({ error: 'ID manquant' }), {
@@ -211,7 +211,7 @@ export const Vehicles: CollectionConfig = {
             })
           }
 
-          const pdfBytes = await generateVolPDF(vehicle)
+          const pdfBytes = (await generateVolPDF(vehicle)) as any
 
           return new Response(pdfBytes, {
             status: 200,

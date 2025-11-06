@@ -1,33 +1,81 @@
+'use client'
 import React from 'react'
-import { useDocumentInfo } from '@payloadcms/ui'
-import './VehicleEditActions.css'
+import { useDocumentInfo, SaveButton } from '@payloadcms/ui'
 
-export const VehicleEditActions: React.FC = () => {
+const VehicleEditActions: React.FC<any> = (props) => {
   const { id, data } = useDocumentInfo()
 
-  if (!id) return null
-
-  const handleDownloadFiche = () => {
-    window.open(`/api/vehicles/generate-pdf/${id}`, '_blank')
+  const handleDownloadFiche = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (id) {
+      window.open(`/api/vehicles/generate-pdf/${id}`, '_blank')
+    }
   }
 
-  const handleDownloadVol = () => {
-    window.open(`/api/vehicles/generate-vol-pdf/${id}`, '_blank')
+  const handleDownloadVol = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (id) {
+      window.open(`/api/vehicles/generate-vol-pdf/${id}`, '_blank')
+    }
   }
 
   return (
-    <div className="vehicle-pdf-actions">
-      <button type="button" className="pdf-button pdf-button-primary" onClick={handleDownloadFiche}>
-        <span className="pdf-icon">📄</span>
-        Télécharger la fiche PDF
-      </button>
+    <>
+      {/* Render original save button */}
+      <SaveButton {...props} />
 
-      {data?.statut === 'vole' && (
-        <button type="button" className="pdf-button pdf-button-danger" onClick={handleDownloadVol}>
-          <span className="pdf-icon">🚨</span>
-          Télécharger déclaration de vol
-        </button>
+      {/* Add separator */}
+      {id && (
+        <div
+          style={{ width: '1px', height: '24px', backgroundColor: '#ccc', margin: '0 0.5rem' }}
+        />
       )}
-    </div>
+
+      {/* Your custom buttons */}
+      {id && (
+        <>
+          <button
+            type="button"
+            onClick={handleDownloadFiche}
+            style={{
+              padding: '0.5rem 1rem',
+              backgroundColor: '#0070f3',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '0.875rem',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            📄 Fiche
+          </button>
+
+          {data?.statut === 'vole' && (
+            <button
+              type="button"
+              onClick={handleDownloadVol}
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: '#dc2626',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+                whiteSpace: 'nowrap',
+                marginLeft: '0.5rem',
+              }}
+            >
+              🚨 Vol
+            </button>
+          )}
+        </>
+      )}
+    </>
   )
 }
+
+export default VehicleEditActions

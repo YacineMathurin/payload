@@ -1,6 +1,7 @@
 import { CollectionConfig } from 'payload'
 import { generateVehiclePDF, generateVolPDF } from '../utils/pdf-generators'
 import PDFDocument from 'pdfkit'
+import VehicleEditActions from '@/components/VehicleEditActions'
 
 // Collection principale des véhicules avec UI améliorée
 export const Vehicles: CollectionConfig = {
@@ -10,6 +11,11 @@ export const Vehicles: CollectionConfig = {
     defaultColumns: ['numeroImmatriculation', 'typeVehicule', 'marque', 'modele', 'statut'],
     group: 'Gestion Douanière',
     description: '🚗 Gestion complète du registre des véhicules',
+    components: {
+      edit: {
+        SaveButton: '@/components/VehicleEditActions', // Adds your buttons alongside save
+      },
+    },
   },
   access: {
     read: () => true,

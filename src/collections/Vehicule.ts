@@ -1,7 +1,5 @@
 import { CollectionConfig } from 'payload'
 import { generateVehiclePDF, generateVolPDF } from '../utils/pdf-generators'
-import PDFDocument from 'pdfkit'
-import VehicleEditActions from '@/components/VehicleEditActions'
 
 // Collection principale des véhicules avec UI améliorée
 export const Vehicles: CollectionConfig = {
@@ -9,7 +7,7 @@ export const Vehicles: CollectionConfig = {
   admin: {
     useAsTitle: 'numeroImmatriculation',
     defaultColumns: ['numeroImmatriculation', 'typeVehicule', 'marque', 'modele', 'statut'],
-    group: 'Gestion Douanière',
+    group: "Ministère de l'interieur",
     description: '🚗 Gestion complète du registre des véhicules',
     components: {
       edit: {
@@ -38,40 +36,81 @@ export const Vehicles: CollectionConfig = {
     ],
     afterChange: [
       async ({ doc, previousDoc, operation, req }) => {
+        // When a vehicle is marked as stolen
         if (
           doc.statut === 'vole' &&
           doc.informationsVol &&
           (!previousDoc || previousDoc.statut !== 'vole')
         ) {
-          await req.payload.create({
+          // Check if an avis de recherche already exists for this vehicle
+          const existingAvis = await req.payload.find({
             collection: 'avis-recherche' as any,
-            data: {
-              vehicule: doc.id,
-              numeroImmatriculation: doc.numeroImmatriculation,
-              typeVehicule: doc.typeVehicule,
-              marque: doc.marque,
-              modele: doc.modele,
-              couleur: doc.couleur,
-              numeroSerie: doc.numeroSerie,
-              dateVol: doc.informationsVol.dateVol,
-              lieuVol: doc.informationsVol.lieuVol,
-              ville: doc.informationsVol.ville,
-              declarant: doc.informationsVol.declarant,
-              telephoneDeclarant: doc.informationsVol.telephoneDeclarant,
-              emailDeclarant: doc.informationsVol.emailDeclarant,
-              circonstances: doc.informationsVol.circonstances,
-              agentEnregistrement: req.user?.id,
-              officierSaisie: doc.informationsVol.officierSaisie, // Copie de l'officier de saisie
-              statutRecherche: 'actif',
+            where: {
+              numeroImmatriculation: { equals: doc.numeroImmatriculation },
             },
+            limit: 1,
           })
+
+          if (existingAvis.docs.length === 0) {
+            // Create new avis de recherche only if none exists
+            await req.payload.create({
+              collection: 'avis-recherche' as any,
+              data: {
+                vehicule: doc.id,
+                numeroImmatriculation: doc.numeroImmatriculation,
+                typeVehicule: doc.typeVehicule,
+                marque: doc.marque,
+                modele: doc.modele,
+                couleur: doc.couleur,
+                numeroSerie: doc.numeroSerie,
+                dateVol: doc.informationsVol.dateVol,
+                lieuVol: doc.informationsVol.lieuVol,
+                ville: doc.informationsVol.ville,
+                declarant: doc.informationsVol.declarant,
+                telephoneDeclarant: doc.informationsVol.telephoneDeclarant,
+                emailDeclarant: doc.informationsVol.emailDeclarant,
+                circonstances: doc.informationsVol.circonstances,
+                agentEnregistrement: req.user?.id,
+                officierSaisie: doc.informationsVol.officierSaisie,
+                statutRecherche: 'actif',
+              },
+            })
+          } else {
+            // Update existing avis de recherche if it was previously closed
+            const existingDoc = existingAvis.docs[0]
+            if (existingDoc.statutRecherche !== 'actif') {
+              await req.payload.update({
+                collection: 'avis-recherche' as any,
+                id: existingDoc.id,
+                data: {
+                  vehicule: doc.id,
+                  typeVehicule: doc.typeVehicule,
+                  marque: doc.marque,
+                  modele: doc.modele,
+                  couleur: doc.couleur,
+                  numeroSerie: doc.numeroSerie,
+                  dateVol: doc.informationsVol.dateVol,
+                  lieuVol: doc.informationsVol.lieuVol,
+                  ville: doc.informationsVol.ville,
+                  declarant: doc.informationsVol.declarant,
+                  telephoneDeclarant: doc.informationsVol.telephoneDeclarant,
+                  emailDeclarant: doc.informationsVol.emailDeclarant,
+                  circonstances: doc.informationsVol.circonstances,
+                  agentEnregistrement: req.user?.id,
+                  officierSaisie: doc.informationsVol.officierSaisie,
+                  statutRecherche: 'actif',
+                },
+              })
+            }
+          }
         }
 
+        // When vehicle is recovered
         if (doc.informationsRecuperation && !previousDoc?.informationsRecuperation) {
           const avisRecherche = await req.payload.find({
             collection: 'avis-recherche' as any,
             where: {
-              vehicule: { equals: doc.id },
+              numeroImmatriculation: { equals: doc.numeroImmatriculation },
               statutRecherche: { equals: 'actif' },
             },
           })
@@ -97,9 +136,17 @@ export const Vehicles: CollectionConfig = {
     {
       path: '/generate-pdf/:id',
       method: 'get',
-      handler: async (req, res) => {
+      handler: async (req) => {
         try {
-          const vehicleId = req.params.id
+          const vehicleId = req.routeParams?.id
+
+          if (!vehicleId) {
+            return new Response(JSON.stringify({ error: 'ID manquant' }), {
+              status: 400,
+              headers: { 'Content-Type': 'application/json' },
+            })
+          }
+
           const vehicle = await req.payload.findByID({
             collection: 'vehicles',
             id: vehicleId,
@@ -107,35 +154,50 @@ export const Vehicles: CollectionConfig = {
           })
 
           if (!vehicle) {
-            return res.status(404).json({ error: 'Véhicule non trouvé' })
+            return new Response(JSON.stringify({ error: 'Véhicule non trouvé' }), {
+              status: 404,
+              headers: { 'Content-Type': 'application/json' },
+            })
           }
 
-          const doc = new PDFDocument({
-            size: 'A4',
-            margins: { top: 50, bottom: 50, left: 50, right: 50 },
+          const pdfBytes = await generateVehiclePDF(vehicle)
+
+          return new Response(pdfBytes, {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/pdf',
+              'Content-Disposition': `attachment; filename="fiche-vehicule-${vehicle.numeroImmatriculation}.pdf"`,
+            },
           })
-
-          res.setHeader('Content-Type', 'application/pdf')
-          res.setHeader(
-            'Content-Disposition',
-            `attachment; filename="fiche-vehicule-${vehicle.numeroImmatriculation}.pdf"`,
-          )
-
-          doc.pipe(res)
-          generateVehiclePDF(doc, vehicle)
-          doc.end()
         } catch (error) {
           console.error('Erreur génération PDF:', error)
-          res.status(500).json({ error: 'Erreur lors de la génération du PDF' })
+          return new Response(
+            JSON.stringify({
+              error: 'Erreur lors de la génération du PDF',
+              details: error instanceof Error ? error.message : 'Unknown error',
+            }),
+            {
+              status: 500,
+              headers: { 'Content-Type': 'application/json' },
+            },
+          )
         }
       },
     },
     {
       path: '/generate-vol-pdf/:id',
       method: 'get',
-      handler: async (req, res) => {
+      handler: async (req) => {
         try {
-          const vehicleId = req.params.id
+          const vehicleId = req.routeParams?.id
+
+          if (!vehicleId) {
+            return new Response(JSON.stringify({ error: 'ID manquant' }), {
+              status: 400,
+              headers: { 'Content-Type': 'application/json' },
+            })
+          }
+
           const vehicle = await req.payload.findByID({
             collection: 'vehicles',
             id: vehicleId,
@@ -143,26 +205,27 @@ export const Vehicles: CollectionConfig = {
           })
 
           if (!vehicle || vehicle.statut !== 'vole' || !vehicle.informationsVol) {
-            return res.status(404).json({ error: 'Données de vol manquantes' })
+            return new Response(JSON.stringify({ error: 'Données de vol manquantes' }), {
+              status: 404,
+              headers: { 'Content-Type': 'application/json' },
+            })
           }
 
-          const doc = new PDFDocument({
-            size: 'A4',
-            margins: { top: 50, bottom: 50, left: 50, right: 50 },
+          const pdfBytes = await generateVolPDF(vehicle)
+
+          return new Response(pdfBytes, {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/pdf',
+              'Content-Disposition': `attachment; filename="declaration-vol-${vehicle.numeroImmatriculation}.pdf"`,
+            },
           })
-
-          res.setHeader('Content-Type', 'application/pdf')
-          res.setHeader(
-            'Content-Disposition',
-            `attachment; filename="declaration-vol-${vehicle.numeroImmatriculation}.pdf"`,
-          )
-
-          doc.pipe(res)
-          generateVolPDF(doc, vehicle)
-          doc.end()
         } catch (error) {
           console.error('Erreur:', error)
-          res.status(500).json({ error: 'Erreur génération PDF' })
+          return new Response(JSON.stringify({ error: 'Erreur génération PDF' }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+          })
         }
       },
     },

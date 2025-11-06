@@ -1,4 +1,16 @@
-export function generateVehiclePDF(doc: PDFKit.PDFDocument, vehicle: any) {
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
+
+export async function generateVehiclePDF(vehicle: any): Promise<Uint8Array> {
+  const pdfDoc = await PDFDocument.create()
+  const timesRomanFont = await pdfDoc.embedFont(StandardFonts.TimesRoman)
+  const timesRomanBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold)
+  const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica)
+  const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
+
+  let page = pdfDoc.addPage([595, 842]) // A4 size
+  const { width, height } = page.getSize()
+  let yPosition = height - 50
+
   const formatDate = (date: string) => {
     return date ? new Date(date).toLocaleDateString('fr-FR') : 'N/A'
   }
@@ -7,110 +19,185 @@ export function generateVehiclePDF(doc: PDFKit.PDFDocument, vehicle: any) {
     return amount ? `${amount.toLocaleString('fr-FR')} ${devise}` : 'N/A'
   }
 
-  // En-tête officiel
-  doc.fontSize(20).font('Helvetica-Bold').text("RÉPUBLIQUE DE CÔTE D'IVOIRE", { align: 'center' })
+  const addText = (
+    text: string,
+    size: number,
+    font: any,
+    color = rgb(0, 0, 0),
+    align: 'left' | 'center' | 'right' = 'left',
+  ) => {
+    const textWidth = font.widthOfTextAtSize(text, size)
+    let x = 50
 
-  doc.fontSize(16).text('DIRECTION DES DOUANES', { align: 'center' }).moveDown()
+    if (align === 'center') {
+      x = (width - textWidth) / 2
+    } else if (align === 'right') {
+      x = width - textWidth - 50
+    }
 
-  doc
-    .fontSize(18)
-    .text("FICHE D'ENREGISTREMENT VÉHICULE", { align: 'center', underline: true })
-    .moveDown()
-
-  doc
-    .fontSize(10)
-    .font('Helvetica')
-    .text(`Date d'édition: ${formatDate(new Date().toISOString())}`, { align: 'right' })
-    .moveDown(2)
-
-  // Section: Informations générales
-  addSection(doc, 'INFORMATIONS GÉNÉRALES')
-  addField(doc, "Numéro d'immatriculation", vehicle.numeroImmatriculation)
-  addField(doc, 'Numéro de série (VIN)', vehicle.numeroSerie)
-  addField(doc, 'Type de véhicule', vehicle.typeVehicule)
-  addField(doc, 'Statut', vehicle.statut)
-  doc.moveDown(0.5)
-
-  addField(doc, 'Marque', vehicle.marque)
-  addField(doc, 'Modèle', vehicle.modele)
-  addField(doc, 'Année', vehicle.annee)
-  addField(doc, 'Couleur', vehicle.couleur)
-  addField(doc, 'Carburant', vehicle.carburant || 'N/A')
-  addField(doc, 'Cylindrée', vehicle.cylindree ? `${vehicle.cylindree} cm³` : 'N/A')
-  addField(doc, 'Poids', vehicle.poids ? `${vehicle.poids} kg` : 'N/A')
-  addField(doc, 'Numéro moteur', vehicle.numeroMoteur || 'N/A')
-
-  // Informations d'achat
-  doc.addPage()
-  addSection(doc, "INFORMATIONS D'ACHAT")
-  addField(doc, "Date d'achat", formatDate(vehicle.dateAchat))
-  addField(doc, "Pays d'origine", vehicle.paysOrigine || 'N/A')
-  addField(doc, "Prix d'achat", formatCurrency(vehicle.prixAchat, vehicle.devise))
-
-  // ... (continuer avec les autres sections)
-
-  // Pied de page
-  doc
-    .fontSize(8)
-    .font('Helvetica-Oblique')
-    .text('Document généré automatiquement', 50, doc.page.height - 80, { align: 'center' })
-    .text("Direction des Douanes de Côte d'Ivoire", { align: 'center' })
-}
-
-export function generateVolPDF(doc: PDFKit.PDFDocument, vehicle: any) {
-  const vol = vehicle.informationsVol
-  const formatDate = (date: string) => {
-    return date ? new Date(date).toLocaleDateString('fr-FR') : 'N/A'
+    page.drawText(text, {
+      x,
+      y: yPosition,
+      size,
+      font,
+      color,
+    })
+    yPosition -= size + 5
   }
 
-  // En-tête avec cadre rouge pour urgence
-  doc.rect(50, 50, doc.page.width - 100, 80).fillAndStroke('#ff0000', '#990000')
+  const addField = (label: string, value: any) => {
+    const displayValue = value !== undefined && value !== null ? String(value) : 'N/A'
+    page.drawText(`${label}: `, {
+      x: 50,
+      y: yPosition,
+      size: 10,
+      font: helveticaBold,
+      color: rgb(0, 0, 0),
+    })
+    page.drawText(displayValue, {
+      x: 200,
+      y: yPosition,
+      size: 10,
+      font: helveticaFont,
+      color: rgb(0, 0, 0),
+    })
+    yPosition -= 20
+  }
 
-  doc
-    .fillColor('#ffffff')
-    .fontSize(22)
-    .font('Helvetica-Bold')
-    .text('⚠️ DÉCLARATION DE VOL', 60, 70, { align: 'center' })
+  const addSection = (title: string) => {
+    if (yPosition < 100) {
+      page = pdfDoc.addPage([595, 842])
+      yPosition = height - 50
+    }
+    yPosition -= 10
+    page.drawText(title, {
+      x: 50,
+      y: yPosition,
+      size: 14,
+      font: helveticaBold,
+      color: rgb(0.2, 0.2, 0.2),
+    })
+    // Underline
+    page.drawLine({
+      start: { x: 50, y: yPosition - 3 },
+      end: { x: 250, y: yPosition - 3 },
+      thickness: 1,
+      color: rgb(0.2, 0.2, 0.2),
+    })
+    yPosition -= 25
+  }
 
-  // ... (continuer avec le reste du PDF)
+  // Header
+  addText("RÉPUBLIQUE DE CÔTE D'IVOIRE", 20, helveticaBold, rgb(0, 0, 0), 'center')
+  addText('DIRECTION DES DOUANES', 16, helveticaBold, rgb(0, 0, 0), 'center')
+  yPosition -= 10
+  addText("FICHE D'ENREGISTREMENT VÉHICULE", 18, helveticaBold, rgb(0, 0, 0), 'center')
+  yPosition -= 5
+  addText(
+    `Date d'édition: ${formatDate(new Date().toISOString())}`,
+    10,
+    helveticaFont,
+    rgb(0, 0, 0),
+    'right',
+  )
+  yPosition -= 20
+
+  // Sections
+  addSection('INFORMATIONS GÉNÉRALES')
+  addField("Numéro d'immatriculation", vehicle.numeroImmatriculation)
+  addField('Numéro de série (VIN)', vehicle.numeroSerie)
+  addField('Type de véhicule', vehicle.typeVehicule)
+  addField('Statut', vehicle.statut)
+  addField('Marque', vehicle.marque)
+  addField('Modèle', vehicle.modele)
+  addField('Année', vehicle.annee)
+  addField('Couleur', vehicle.couleur)
+  addField('Carburant', vehicle.carburant || 'N/A')
+  addField('Cylindrée', vehicle.cylindree ? `${vehicle.cylindree} cm³` : 'N/A')
+  addField('Poids', vehicle.poids ? `${vehicle.poids} kg` : 'N/A')
+  addField('Numéro moteur', vehicle.numeroMoteur || 'N/A')
+
+  addSection("INFORMATIONS D'ACHAT")
+  addField("Date d'achat", formatDate(vehicle.dateAchat))
+  addField("Pays d'origine", vehicle.paysOrigine || 'N/A')
+  addField("Prix d'achat", formatCurrency(vehicle.prixAchat, vehicle.devise))
+
+  // Footer on all pages
+  const pages = pdfDoc.getPages()
+  pages.forEach((p) => {
+    p.drawText('Document généré automatiquement', {
+      x: 150,
+      y: 40,
+      size: 8,
+      font: helveticaFont,
+      color: rgb(0.5, 0.5, 0.5),
+    })
+    p.drawText('Direction des Douanes du Niger (AES)', {
+      x: 150,
+      y: 25,
+      size: 8,
+      font: helveticaFont,
+      color: rgb(0.5, 0.5, 0.5),
+    })
+  })
+
+  return await pdfDoc.save()
 }
 
-// Fonctions utilitaires
-function addSection(doc: PDFKit.PDFDocument, title: string, color: string = '#000000') {
-  if (doc.y > 700) doc.addPage()
+export async function generateVolPDF(vehicle: any): Promise<Uint8Array> {
+  const pdfDoc = await PDFDocument.create()
+  const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
+  const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica)
 
-  doc
-    .fontSize(14)
-    .font('Helvetica-Bold')
-    .fillColor(color)
-    .text(title)
-    .fillColor('#000000')
-    .moveDown(0.5)
+  const page = pdfDoc.addPage([595, 842])
+  const { width, height } = page.getSize()
+  let yPosition = height - 50
 
-  doc
-    .moveTo(50, doc.y)
-    .lineTo(doc.page.width - 50, doc.y)
-    .strokeColor(color)
-    .lineWidth(2)
-    .stroke()
-    .moveDown(0.8)
-}
+  // Header
+  page.drawText('DÉCLARATION DE VOL', {
+    x: 150,
+    y: yPosition,
+    size: 20,
+    font: helveticaBold,
+    color: rgb(0.8, 0, 0),
+  })
+  yPosition -= 40
 
-function addField(
-  doc: PDFKit.PDFDocument,
-  label: string,
-  value: any,
-  bold: boolean = false,
-  labelColor: string = '#000000',
-) {
-  if (doc.y > 720) doc.addPage()
+  page.drawText(`Véhicule: ${vehicle.numeroImmatriculation}`, {
+    x: 50,
+    y: yPosition,
+    size: 14,
+    font: helveticaBold,
+  })
+  yPosition -= 30
 
-  doc
-    .fontSize(10)
-    .font('Helvetica-Bold')
-    .fillColor(labelColor)
-    .text(`${label}: `, { continued: true })
-    .font(bold ? 'Helvetica-Bold' : 'Helvetica')
-    .fillColor('#000000')
-    .text(value || 'N/A')
+  if (vehicle.informationsVol) {
+    page.drawText(
+      `Date du vol: ${new Date(vehicle.informationsVol.dateVol).toLocaleDateString('fr-FR')}`,
+      {
+        x: 50,
+        y: yPosition,
+        size: 12,
+        font: helveticaFont,
+      },
+    )
+    yPosition -= 25
+
+    page.drawText(`Lieu: ${vehicle.informationsVol.lieuVol || 'N/A'}`, {
+      x: 50,
+      y: yPosition,
+      size: 12,
+      font: helveticaFont,
+    })
+    yPosition -= 25
+
+    page.drawText(`Numéro de plainte: ${vehicle.informationsVol.numeroPlainte || 'N/A'}`, {
+      x: 50,
+      y: yPosition,
+      size: 12,
+      font: helveticaFont,
+    })
+  }
+
+  return await pdfDoc.save()
 }

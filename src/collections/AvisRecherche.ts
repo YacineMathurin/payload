@@ -6,22 +6,34 @@ export const AvisRecherche: CollectionConfig = {
   admin: {
     useAsTitle: 'numeroImmatriculation',
     defaultColumns: ['numeroImmatriculation', 'marque', 'modele', 'dateVol', 'statutRecherche'],
-    group: 'Gestion Douanière',
+    group: "Ministère de l'interieur",
     description: '🔍 Véhicules recherchés',
   },
   access: {
     read: () => true,
-    create: () => true,
-    update: () => true,
+    create: ({ req: { user } }) => user?.role === 'super-admin',
+    update: ({ req: { user } }) => user?.role === 'super-admin',
     delete: ({ req: { user } }) => user?.role === 'super-admin',
   },
   fields: [
     {
-      name: 'vehicule',
-      type: 'relationship',
-      relationTo: 'vehicles',
-      required: true,
-      label: 'Véhicule concerné',
+      type: 'row',
+      fields: [
+        {
+          name: 'vehicule',
+          type: 'text',
+          // relationTo: 'vehicles',
+          required: true,
+          unique: true,
+          label: 'Véhicule concerné',
+
+          admin: {
+            width: '40%',
+            placeholder: 'Voiture, Moto...',
+            readOnly: true,
+          },
+        },
+      ],
     },
     {
       type: 'row',
@@ -34,6 +46,7 @@ export const AvisRecherche: CollectionConfig = {
           admin: {
             width: '20%',
             placeholder: 'Voiture, Moto...',
+            readOnly: true,
           },
         },
         {
@@ -179,7 +192,7 @@ export const AvisRecherche: CollectionConfig = {
           relationTo: 'users',
           label: 'Agent enregistrant',
           admin: {
-            width: '20%',
+            width: '40%',
           },
         },
         {
@@ -189,7 +202,7 @@ export const AvisRecherche: CollectionConfig = {
           label: 'Statut',
           defaultValue: 'actif',
           admin: {
-            width: '20%',
+            width: '40%',
           },
           options: [
             { label: '🔴 Recherche active', value: 'actif' },

@@ -3,7 +3,7 @@ import { CollectionConfig } from 'payload'
 export const Media: CollectionConfig = {
   slug: 'media',
   admin: {
-    group: 'Gestion Douanière',
+    group: "Ministère de l'interieur",
     description: '📁 Documents et fichiers',
   },
   access: {

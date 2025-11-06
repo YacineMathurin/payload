@@ -175,7 +175,7 @@ export interface Media {
  */
 export interface AvisRecherche {
   id: string;
-  vehicule: string | Vehicle;
+  vehicule: string;
   typeVehicule: string;
   numeroImmatriculation: string;
   numeroSerie?: string | null;
@@ -195,6 +195,41 @@ export interface AvisRecherche {
   lieuRecuperation?: string | null;
   agentRecuperation?: (string | null) | User;
   circonstancesRecuperation?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Fichier des personnes et informations d'identification.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "people".
+ */
+export interface Person {
+  id: string;
+  /**
+   * Photo d'identité de la personne
+   */
+  photo?: (string | null) | Media;
+  prenom: string;
+  nom: string;
+  dateNaissance: string;
+  lieuNaissance?: string | null;
+  sexe?: ('M' | 'F' | 'X') | null;
+  nationalite?: string | null;
+  /**
+   * Utilisé comme identifiant principal pour les recherches
+   */
+  numeroNational: string;
+  numeroPasseport?: string | null;
+  adresse?: string | null;
+  telephone?: string | null;
+  email?: string | null;
+  /**
+   * Cochez si la personne fait l'objet d'un avis de recherche
+   */
+  estArrete?: boolean | null;
+  statut?: ('actif' | 'detenu' | 'recherche' | 'libere') | null;
+  notes?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -357,41 +392,6 @@ export interface Vehicle {
     agentRecuperation?: (string | null) | User;
     documentRecuperation?: (string | null) | Media;
   };
-  notes?: string | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * Fichier des personnes et informations d'identification.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "people".
- */
-export interface Person {
-  id: string;
-  /**
-   * Photo d'identité de la personne
-   */
-  photo?: (string | null) | Media;
-  prenom: string;
-  nom: string;
-  dateNaissance: string;
-  lieuNaissance?: string | null;
-  sexe?: ('M' | 'F' | 'X') | null;
-  nationalite?: string | null;
-  /**
-   * Utilisé comme identifiant principal pour les recherches
-   */
-  numeroNational: string;
-  numeroPasseport?: string | null;
-  adresse?: string | null;
-  telephone?: string | null;
-  email?: string | null;
-  /**
-   * Cochez si la personne fait l'objet d'un avis de recherche
-   */
-  estArrete?: boolean | null;
-  statut?: ('actif' | 'detenu' | 'recherche' | 'libere') | null;
   notes?: string | null;
   updatedAt: string;
   createdAt: string;

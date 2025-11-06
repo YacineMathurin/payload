@@ -50,7 +50,7 @@ const VehicleEditActions: React.FC<any> = (props) => {
               whiteSpace: 'nowrap',
             }}
           >
-            📄 Fiche
+            📄 Imprimer la fiche
           </button>
 
           {data?.statut === 'vole' && (
@@ -69,7 +69,7 @@ const VehicleEditActions: React.FC<any> = (props) => {
                 marginLeft: '0.5rem',
               }}
             >
-              🚨 Vol
+              🚨 Imprimer la déclaration
             </button>
           )}
         </>

@@ -27,8 +27,8 @@ export default async function HomePage() {
             width={65}
           />
         </picture>
-        {!user && <h1>Welcome to your new project.</h1>}
-        {user && <h1>Welcome back, {user.email}</h1>}
+        {!user && <h1>Bienvenue sur Niger Pay.</h1>}
+        {user && <h1>Bienvenue, {user.email}</h1>}
         <div className="links">
           <a
             className="admin"
@@ -36,24 +36,24 @@ export default async function HomePage() {
             rel="noopener noreferrer"
             target="_blank"
           >
-            Go to admin panel
+            Aller au panneau de configuration
           </a>
-          <a
+          {/* <a
             className="docs"
             href="https://payloadcms.com/docs"
             rel="noopener noreferrer"
             target="_blank"
           >
             Documentation
-          </a>
+          </a> */}
         </div>
       </div>
-      <div className="footer">
+      {/* <div className="footer">
         <p>Update this page by editing</p>
         <a className="codeLink" href={fileURL}>
           <code>app/(frontend)/page.tsx</code>
         </a>
-      </div>
+      </div> */}
     </div>
   )
 }

@@ -22,6 +22,7 @@
     "@payloadcms/next": "3.62.1",
     "@payloadcms/payload-cloud": "3.62.1",
     "@payloadcms/richtext-lexical": "3.62.1",
+    "@payloadcms/translations": "^3.62.1",
     "@payloadcms/ui": "3.62.1",
     "@types/pdfkit": "^0.17.3",
     "cross-env": "^7.0.3",

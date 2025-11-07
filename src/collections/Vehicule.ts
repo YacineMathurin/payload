@@ -1,5 +1,9 @@
 import { CollectionConfig } from 'payload'
-import { generateVehiclePDF, generateVolPDF } from '../utils/pdf-generators'
+import {
+  generateVehiclePDF,
+  generateVolPDF,
+  generateHistoriqueChangementPDF,
+} from '../utils/pdf-generators'
 
 // Collection principale des véhicules avec UI améliorée
 export const Vehicles: CollectionConfig = {
@@ -11,7 +15,7 @@ export const Vehicles: CollectionConfig = {
     description: '🚗 Gestion complète du registre des véhicules',
     components: {
       edit: {
-        SaveButton: '@/components/VehicleEditActions', // Adds your buttons alongside save
+        SaveButton: '@/components/VehicleEditActions',
       },
     },
   },
@@ -42,7 +46,6 @@ export const Vehicles: CollectionConfig = {
           doc.informationsVol &&
           (!previousDoc || previousDoc.statut !== 'vole')
         ) {
-          // Check if an avis de recherche already exists for this vehicle
           const existingAvis = await req.payload.find({
             collection: 'avis-recherche' as any,
             where: {
@@ -52,7 +55,6 @@ export const Vehicles: CollectionConfig = {
           })
 
           if (existingAvis.docs.length === 0) {
-            // Create new avis de recherche only if none exists
             await req.payload.create({
               collection: 'avis-recherche' as any,
               data: {
@@ -76,7 +78,6 @@ export const Vehicles: CollectionConfig = {
               },
             })
           } else {
-            // Update existing avis de recherche if it was previously closed
             const existingDoc = existingAvis.docs[0]
             if (existingDoc.statutRecherche !== 'actif') {
               await req.payload.update({
@@ -229,6 +230,71 @@ export const Vehicles: CollectionConfig = {
         }
       },
     },
+    // NOUVEAU: Endpoint pour générer PDF d'un changement spécifique
+    {
+      path: '/generate-historique-pdf/:id/:index',
+      method: 'get',
+      handler: async (req) => {
+        try {
+          const vehicleId = req.routeParams?.id as string
+          const changeIndex = parseInt(req.routeParams?.index as string)
+          console.log({ vehicleId, changeIndex })
+
+          if (!vehicleId || isNaN(changeIndex)) {
+            return new Response(JSON.stringify({ error: 'Paramètres invalides' }), {
+              status: 400,
+              headers: { 'Content-Type': 'application/json' },
+            })
+          }
+
+          const vehicle = await req.payload.findByID({
+            collection: 'vehicles',
+            id: vehicleId,
+            depth: 2,
+          })
+
+          if (
+            !vehicle ||
+            !vehicle.historiqueChangements ||
+            !vehicle.historiqueChangements[changeIndex]
+          ) {
+            return new Response(JSON.stringify({ error: 'Changement non trouvé' }), {
+              status: 404,
+              headers: { 'Content-Type': 'application/json' },
+            })
+          }
+
+          const changement = vehicle.historiqueChangements[changeIndex]
+          const pdfBytes = (await generateHistoriqueChangementPDF(
+            vehicle,
+            changement,
+            changeIndex,
+          )) as any
+
+          const filename = `changement-${changement.typeChangement}-${vehicle.numeroImmatriculation}-${changeIndex + 1}.pdf`
+
+          return new Response(pdfBytes, {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/pdf',
+              'Content-Disposition': `attachment; filename="${filename}"`,
+            },
+          })
+        } catch (error) {
+          console.error('Erreur génération PDF historique:', error)
+          return new Response(
+            JSON.stringify({
+              error: 'Erreur lors de la génération du PDF',
+              details: error instanceof Error ? error.message : 'Unknown error',
+            }),
+            {
+              status: 500,
+              headers: { 'Content-Type': 'application/json' },
+            },
+          )
+        }
+      },
+    },
   ],
   fields: [
     // === SECTION: INFORMATIONS GÉNÉRALES ===
@@ -238,7 +304,6 @@ export const Vehicles: CollectionConfig = {
         {
           name: 'typeVehicule',
           type: 'select',
-
           label: 'Type de véhicule',
           admin: {
             width: '20%',
@@ -256,7 +321,6 @@ export const Vehicles: CollectionConfig = {
         {
           name: 'statut',
           type: 'select',
-
           label: 'Statut du véhicule',
           defaultValue: 'actif',
           admin: {
@@ -277,7 +341,6 @@ export const Vehicles: CollectionConfig = {
         {
           name: 'numeroImmatriculation',
           type: 'text',
-
           unique: true,
           label: "Numéro d'immatriculation",
           admin: {
@@ -288,7 +351,6 @@ export const Vehicles: CollectionConfig = {
         {
           name: 'numeroSerie',
           type: 'text',
-
           unique: true,
           label: 'Numéro de série (VIN/Châssis)',
           admin: {
@@ -299,7 +361,6 @@ export const Vehicles: CollectionConfig = {
         {
           name: 'marque',
           type: 'text',
-
           label: 'Marque',
           admin: {
             width: '20%',
@@ -309,7 +370,6 @@ export const Vehicles: CollectionConfig = {
         {
           name: 'modele',
           type: 'text',
-
           label: 'Modèle',
           admin: {
             width: '20%',
@@ -319,7 +379,6 @@ export const Vehicles: CollectionConfig = {
         {
           name: 'annee',
           type: 'number',
-
           label: 'Année de fabrication',
           admin: {
             width: '20%',
@@ -328,14 +387,12 @@ export const Vehicles: CollectionConfig = {
         },
       ],
     },
-
     {
       type: 'row',
       fields: [
         {
           name: 'couleur',
           type: 'text',
-
           label: 'Couleur',
           admin: {
             width: '20%',
@@ -405,7 +462,6 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'dateAchat',
               type: 'date',
-
               label: "Date d'achat",
               admin: {
                 width: '20%',
@@ -415,7 +471,6 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'paysOrigine',
               type: 'text',
-
               label: "Pays d'origine",
               admin: {
                 width: '20%',
@@ -430,7 +485,6 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'prixAchat',
               type: 'number',
-
               label: "Prix d'achat",
               admin: {
                 width: '20%',
@@ -441,7 +495,6 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'devise',
               type: 'select',
-
               label: 'Devise',
               defaultValue: 'XOF',
               admin: {
@@ -538,7 +591,6 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'typeProprietaire',
               type: 'select',
-
               label: 'Type',
               admin: {
                 width: '20%',
@@ -551,7 +603,6 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'dateAcquisition',
               type: 'date',
-
               label: "Date d'acquisition",
               admin: {
                 width: '20%',
@@ -565,7 +616,6 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'nom',
               type: 'text',
-
               label: 'Nom complet / Raison sociale',
               admin: {
                 width: '20%',
@@ -580,7 +630,6 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'ville',
               type: 'text',
-
               label: 'Ville',
               admin: {
                 width: '20%',
@@ -604,7 +653,6 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'adresse',
               type: 'textarea',
-
               label: 'Adresse complète',
               admin: {
                 placeholder: 'Rue, quartier, commune...',
@@ -619,7 +667,6 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'telephone',
               type: 'text',
-
               label: 'Téléphone',
               admin: {
                 width: '20%',
@@ -657,12 +704,14 @@ export const Vehicles: CollectionConfig = {
       admin: {
         description: 'Changements de plaques et de propriétaires',
         initCollapsed: true,
+        components: {
+          RowLabel: '@/components/HistoriqueChangementRowLabel', // Pour afficher un label personnalisé
+        },
       },
       hooks: {
         beforeChange: [
           async ({ req, operation, data, value }) => {
             if (req.user && value && Array.isArray(value)) {
-              // Pour chaque élément du tableau, si c'est nouveau ou modifié
               return value.map((item: any) => {
                 if (!item.officierSaisie) {
                   return {
@@ -685,7 +734,6 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'typeChangement',
               type: 'select',
-
               label: 'Type',
               admin: {
                 width: '20%',
@@ -699,7 +747,6 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'dateChangement',
               type: 'date',
-
               label: 'Date',
               admin: {
                 width: '20%',
@@ -783,7 +830,7 @@ export const Vehicles: CollectionConfig = {
               relationTo: 'media',
               label: '📎 Document justificatif',
               admin: {
-                width: '20%',
+                width: '50%',
               },
             },
             {
@@ -792,7 +839,7 @@ export const Vehicles: CollectionConfig = {
               relationTo: 'users',
               label: 'Agent enregistrant',
               admin: {
-                width: '20%',
+                width: '50%',
               },
             },
           ],
@@ -822,6 +869,16 @@ export const Vehicles: CollectionConfig = {
               },
             },
           ],
+        },
+        // NOUVEAU: Champ UI pour le bouton PDF
+        {
+          name: 'pdfButton',
+          type: 'ui',
+          admin: {
+            components: {
+              Field: '@/components/HistoriqueChangementPDFButton',
+            },
+          },
         },
       ],
     },
@@ -861,7 +918,6 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'dateInfraction',
               type: 'date',
-
               label: 'Date',
               admin: {
                 width: '20%',
@@ -879,7 +935,6 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'ville',
               type: 'text',
-
               label: 'Ville',
               admin: {
                 width: '20%',
@@ -894,7 +949,6 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'lieuInfraction',
               type: 'text',
-
               label: 'Lieu précis',
               admin: {
                 width: '20%',
@@ -904,12 +958,14 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'typeInfraction',
               type: 'select',
-
               label: 'Type',
               admin: {
                 width: '20%',
               },
               options: [
+                { label: '📱 Téléphone au volant', value: 'telephone_volant' },
+                { label: '🔒 Conduite sans ceinture', value: 'sans_ceinture' },
+                { label: '🪖 Conduite sans casque', value: 'sans_casque' },
                 { label: '🚀 Excès de vitesse', value: 'exces_vitesse' },
                 { label: '🅿️ Stationnement interdit', value: 'stationnement' },
                 { label: '🪪 Conduite sans permis', value: 'sans_permis' },
@@ -917,7 +973,6 @@ export const Vehicles: CollectionConfig = {
                 { label: '🚦 Non respect feu rouge', value: 'feu_rouge' },
                 { label: '🛃 Problème douanier', value: 'douane' },
                 { label: '📦 Contrebande', value: 'contrebande' },
-                { label: '📄 Documents falsifiés', value: 'documents_falsifies' },
                 { label: 'Autre', value: 'autre' },
               ],
             },
@@ -926,7 +981,6 @@ export const Vehicles: CollectionConfig = {
         {
           name: 'descriptionInfraction',
           type: 'textarea',
-
           label: 'Description',
           admin: {
             placeholder: "Décrivez les circonstances de l'infraction...",
@@ -939,7 +993,6 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'conducteur',
               type: 'text',
-
               label: 'Conducteur',
               admin: {
                 width: '20%',
@@ -1007,7 +1060,7 @@ export const Vehicles: CollectionConfig = {
               relationTo: 'media',
               label: '📎 Document (PV, photo)',
               admin: {
-                width: '20%',
+                width: '80%',
               },
             },
           ],
@@ -1057,7 +1110,6 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'dateVol',
               type: 'date',
-
               label: 'Date du vol',
               admin: {
                 width: '20%',
@@ -1075,7 +1127,6 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'ville',
               type: 'text',
-
               label: 'Ville',
               admin: {
                 width: '20%',
@@ -1087,7 +1138,6 @@ export const Vehicles: CollectionConfig = {
         {
           name: 'lieuVol',
           type: 'text',
-
           label: 'Lieu précis du vol',
           admin: {
             placeholder: 'Adresse exacte où le véhicule a été volé',
@@ -1099,7 +1149,6 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'declarant',
               type: 'text',
-
               label: 'Déclarant',
               admin: {
                 width: '20%',
@@ -1109,7 +1158,6 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'telephoneDeclarant',
               type: 'text',
-
               label: 'Téléphone',
               admin: {
                 width: '20%',
@@ -1130,7 +1178,6 @@ export const Vehicles: CollectionConfig = {
         {
           name: 'circonstances',
           type: 'textarea',
-
           label: 'Circonstances du vol',
           admin: {
             placeholder: "Décrivez en détail comment le vol s'est produit...",
@@ -1205,7 +1252,6 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'dateRecuperation',
               type: 'date',
-
               label: 'Date',
               admin: {
                 width: '20%',
@@ -1241,7 +1287,6 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'lieuRecuperation',
               type: 'text',
-
               label: 'Lieu de récupération',
               admin: {
                 width: '20%',
@@ -1251,7 +1296,6 @@ export const Vehicles: CollectionConfig = {
             {
               name: 'recuperePar',
               type: 'text',
-
               label: 'Récupéré par',
               admin: {
                 width: '20%',

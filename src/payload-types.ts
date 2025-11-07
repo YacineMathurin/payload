@@ -70,7 +70,6 @@ export interface Config {
     users: User;
     media: Media;
     'avis-recherche': AvisRecherche;
-    people: Person;
     vehicles: Vehicle;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
@@ -82,7 +81,6 @@ export interface Config {
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     'avis-recherche': AvisRechercheSelect<false> | AvisRechercheSelect<true>;
-    people: PeopleSelect<false> | PeopleSelect<true>;
     vehicles: VehiclesSelect<false> | VehiclesSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -199,41 +197,6 @@ export interface AvisRecherche {
   createdAt: string;
 }
 /**
- * Fichier des personnes et informations d'identification.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "people".
- */
-export interface Person {
-  id: string;
-  /**
-   * Photo d'identité de la personne
-   */
-  photo?: (string | null) | Media;
-  prenom: string;
-  nom: string;
-  dateNaissance: string;
-  lieuNaissance?: string | null;
-  sexe?: ('M' | 'F' | 'X') | null;
-  nationalite?: string | null;
-  /**
-   * Utilisé comme identifiant principal pour les recherches
-   */
-  numeroNational: string;
-  numeroPasseport?: string | null;
-  adresse?: string | null;
-  telephone?: string | null;
-  email?: string | null;
-  /**
-   * Cochez si la personne fait l'objet d'un avis de recherche
-   */
-  estArrete?: boolean | null;
-  statut?: ('actif' | 'detenu' | 'recherche' | 'libere') | null;
-  notes?: string | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
  * 🚗 Gestion complète du registre des véhicules
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -326,6 +289,9 @@ export interface Vehicle {
         lieuInfraction?: string | null;
         typeInfraction?:
           | (
+              | 'telephone_volant'
+              | 'sans_ceinture'
+              | 'sans_casque'
               | 'exces_vitesse'
               | 'stationnement'
               | 'sans_permis'
@@ -333,7 +299,6 @@ export interface Vehicle {
               | 'feu_rouge'
               | 'douane'
               | 'contrebande'
-              | 'documents_falsifies'
               | 'autre'
             )
           | null;
@@ -431,10 +396,6 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'avis-recherche';
         value: string | AvisRecherche;
-      } | null)
-    | ({
-        relationTo: 'people';
-        value: string | Person;
       } | null)
     | ({
         relationTo: 'vehicles';
@@ -548,29 +509,6 @@ export interface AvisRechercheSelect<T extends boolean = true> {
   lieuRecuperation?: T;
   agentRecuperation?: T;
   circonstancesRecuperation?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "people_select".
- */
-export interface PeopleSelect<T extends boolean = true> {
-  photo?: T;
-  prenom?: T;
-  nom?: T;
-  dateNaissance?: T;
-  lieuNaissance?: T;
-  sexe?: T;
-  nationalite?: T;
-  numeroNational?: T;
-  numeroPasseport?: T;
-  adresse?: T;
-  telephone?: T;
-  email?: T;
-  estArrete?: T;
-  statut?: T;
-  notes?: T;
   updatedAt?: T;
   createdAt?: T;
 }

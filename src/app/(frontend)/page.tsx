@@ -27,7 +27,7 @@ export default async function HomePage() {
             width={65}
           />
         </picture>
-        {!user && <h1>Bienvenue sur Niger Pay.</h1>}
+        {!user && <h1>Bienvenue sur Niger Payload</h1>}
         {user && <h1>Bienvenue, {user.email}</h1>}
         <div className="links">
           <a

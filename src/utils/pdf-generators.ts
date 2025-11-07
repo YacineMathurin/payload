@@ -88,7 +88,7 @@ export async function generateVehiclePDF(vehicle: any): Promise<Uint8Array> {
   }
 
   // Header
-  addText("RÉPUBLIQUE DE CÔTE D'IVOIRE", 20, helveticaBold, rgb(0, 0, 0), 'center')
+  addText('RÉPUBLIQUE DU NIGER', 20, helveticaBold, rgb(0, 0, 0), 'center')
   addText('DIRECTION DES DOUANES', 16, helveticaBold, rgb(0, 0, 0), 'center')
   yPosition -= 10
   addText("FICHE D'ENREGISTREMENT VÉHICULE", 18, helveticaBold, rgb(0, 0, 0), 'center')
@@ -200,4 +200,429 @@ export async function generateVolPDF(vehicle: any): Promise<Uint8Array> {
   }
 
   return await pdfDoc.save()
+}
+
+/**
+ * Génère un PDF pour un changement spécifique de l'historique
+ * @param vehicle - Les données complètes du véhicule
+ * @param changement - Les données du changement spécifique
+ * @param index - L'index du changement dans le tableau
+ */
+export async function generateHistoriqueChangementPDF(
+  vehicle: any,
+  changement: any,
+  index: number,
+): Promise<Uint8Array> {
+  // Créer un nouveau document PDF
+  const pdfDoc = await PDFDocument.create()
+  const page = pdfDoc.addPage([595.28, 841.89]) // A4
+  const { width, height } = page.getSize()
+
+  // Charger les polices
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
+  const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
+
+  // Couleurs
+  const primaryColor = rgb(0.2, 0.3, 0.5)
+  const secondaryColor = rgb(0.4, 0.4, 0.4)
+  const accentColor = rgb(0.0, 0.4, 0.8)
+
+  let yPosition = height - 50
+
+  // === EN-TÊTE ===
+  page.drawRectangle({
+    x: 0,
+    y: height - 120,
+    width: width,
+    height: 120,
+    color: primaryColor,
+  })
+
+  page.drawText('RÉPUBLIQUE DU NIGER', {
+    x: 50,
+    y: height - 60,
+    size: 14,
+    font: fontBold,
+    color: rgb(1, 1, 1),
+  })
+
+  page.drawText("Ministère de l'Intérieur et de la Sécurité", {
+    x: 50,
+    y: height - 80,
+    size: 12,
+    font: font,
+    color: rgb(1, 1, 1),
+  })
+
+  page.drawText('CERTIFICAT DE CHANGEMENT', {
+    x: 50,
+    y: height - 105,
+    size: 16,
+    font: fontBold,
+    color: rgb(1, 1, 1),
+  })
+
+  yPosition = height - 150
+
+  // === TYPE DE CHANGEMENT ===
+  const typeLabels: Record<string, string> = {
+    plaque: "CHANGEMENT DE PLAQUE D'IMMATRICULATION",
+    proprietaire: 'CHANGEMENT DE PROPRIÉTAIRE',
+    les_deux: 'CHANGEMENT DE PLAQUE ET DE PROPRIÉTAIRE',
+  }
+
+  const typeLabel = typeLabels[changement.typeChangement] || 'CHANGEMENT'
+
+  page.drawText(typeLabel, {
+    x: 50,
+    y: yPosition,
+    size: 14,
+    font: fontBold,
+    color: accentColor,
+  })
+
+  yPosition -= 30
+
+  // === INFORMATIONS DU VÉHICULE ===
+  page.drawText('INFORMATIONS DU VÉHICULE', {
+    x: 50,
+    y: yPosition,
+    size: 12,
+    font: fontBold,
+    color: primaryColor,
+  })
+
+  yPosition -= 5
+  page.drawLine({
+    start: { x: 50, y: yPosition },
+    end: { x: width - 50, y: yPosition },
+    thickness: 1,
+    color: primaryColor,
+  })
+
+  yPosition -= 20
+
+  const vehicleInfo = [
+    { label: 'Immatriculation actuelle', value: vehicle.numeroImmatriculation || 'N/A' },
+    { label: 'Type de véhicule', value: vehicle.typeVehicule || 'N/A' },
+    { label: 'Marque', value: vehicle.marque || 'N/A' },
+    { label: 'Modèle', value: vehicle.modele || 'N/A' },
+    { label: 'Numéro de série (VIN)', value: vehicle.numeroSerie || 'N/A' },
+    { label: 'Couleur', value: vehicle.couleur || 'N/A' },
+  ]
+
+  for (const info of vehicleInfo) {
+    page.drawText(`${info.label}:`, {
+      x: 50,
+      y: yPosition,
+      size: 10,
+      font: fontBold,
+      color: secondaryColor,
+    })
+
+    page.drawText(info.value, {
+      x: 220,
+      y: yPosition,
+      size: 10,
+      font: font,
+      color: rgb(0, 0, 0),
+    })
+
+    yPosition -= 18
+  }
+
+  yPosition -= 10
+
+  // === DÉTAILS DU CHANGEMENT ===
+  page.drawText('DÉTAILS DU CHANGEMENT', {
+    x: 50,
+    y: yPosition,
+    size: 12,
+    font: fontBold,
+    color: primaryColor,
+  })
+
+  yPosition -= 5
+  page.drawLine({
+    start: { x: 50, y: yPosition },
+    end: { x: width - 50, y: yPosition },
+    thickness: 1,
+    color: primaryColor,
+  })
+
+  yPosition -= 20
+
+  // Date du changement
+  const dateChangement = changement.dateChangement
+    ? new Date(changement.dateChangement).toLocaleDateString('fr-FR', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+      })
+    : 'Non spécifiée'
+
+  page.drawText('Date du changement:', {
+    x: 50,
+    y: yPosition,
+    size: 10,
+    font: fontBold,
+    color: secondaryColor,
+  })
+
+  page.drawText(dateChangement, {
+    x: 220,
+    y: yPosition,
+    size: 10,
+    font: font,
+    color: rgb(0, 0, 0),
+  })
+
+  yPosition -= 25
+
+  // Changement de plaque (si applicable)
+  if (changement.typeChangement === 'plaque' || changement.typeChangement === 'les_deux') {
+    page.drawText('CHANGEMENT DE PLAQUE', {
+      x: 50,
+      y: yPosition,
+      size: 11,
+      font: fontBold,
+      color: accentColor,
+    })
+
+    yPosition -= 20
+
+    page.drawText('Ancienne plaque:', {
+      x: 60,
+      y: yPosition,
+      size: 10,
+      font: fontBold,
+      color: secondaryColor,
+    })
+
+    page.drawText(changement.anciennePlaque || 'N/A', {
+      x: 220,
+      y: yPosition,
+      size: 10,
+      font: font,
+      color: rgb(0, 0, 0),
+    })
+
+    yPosition -= 18
+
+    page.drawText('Nouvelle plaque:', {
+      x: 60,
+      y: yPosition,
+      size: 10,
+      font: fontBold,
+      color: secondaryColor,
+    })
+
+    page.drawText(changement.nouvellePlaque || 'N/A', {
+      x: 220,
+      y: yPosition,
+      size: 10,
+      font: font,
+      color: rgb(0, 0, 0),
+    })
+
+    yPosition -= 25
+  }
+
+  // Changement de propriétaire (si applicable)
+  if (changement.typeChangement === 'proprietaire' || changement.typeChangement === 'les_deux') {
+    page.drawText('CHANGEMENT DE PROPRIÉTAIRE', {
+      x: 50,
+      y: yPosition,
+      size: 11,
+      font: fontBold,
+      color: accentColor,
+    })
+
+    yPosition -= 20
+
+    page.drawText('Ancien propriétaire:', {
+      x: 60,
+      y: yPosition,
+      size: 10,
+      font: fontBold,
+      color: secondaryColor,
+    })
+
+    page.drawText(changement.ancienProprietaire || 'N/A', {
+      x: 220,
+      y: yPosition,
+      size: 10,
+      font: font,
+      color: rgb(0, 0, 0),
+    })
+
+    yPosition -= 18
+
+    page.drawText('Nouveau propriétaire:', {
+      x: 60,
+      y: yPosition,
+      size: 10,
+      font: fontBold,
+      color: secondaryColor,
+    })
+
+    page.drawText(changement.nouveauProprietaire || 'N/A', {
+      x: 220,
+      y: yPosition,
+      size: 10,
+      font: font,
+      color: rgb(0, 0, 0),
+    })
+
+    yPosition -= 25
+  }
+
+  // Motif
+  if (changement.motif) {
+    page.drawText('Motif du changement:', {
+      x: 50,
+      y: yPosition,
+      size: 10,
+      font: fontBold,
+      color: secondaryColor,
+    })
+
+    yPosition -= 15
+
+    // Diviser le texte en lignes si nécessaire
+    const motifLines = wrapText(changement.motif, 70)
+    for (const line of motifLines) {
+      page.drawText(line, {
+        x: 60,
+        y: yPosition,
+        size: 9,
+        font: font,
+        color: rgb(0, 0, 0),
+      })
+      yPosition -= 14
+    }
+
+    yPosition -= 10
+  }
+
+  // === INFORMATIONS ADMINISTRATIVES ===
+  yPosition -= 10
+
+  page.drawText('INFORMATIONS ADMINISTRATIVES', {
+    x: 50,
+    y: yPosition,
+    size: 12,
+    font: fontBold,
+    color: primaryColor,
+  })
+
+  yPosition -= 5
+  page.drawLine({
+    start: { x: 50, y: yPosition },
+    end: { x: width - 50, y: yPosition },
+    thickness: 1,
+    color: primaryColor,
+  })
+
+  yPosition -= 20
+
+  const adminInfo = [
+    {
+      label: 'Numéro de référence',
+      value: `CHG-${vehicle.numeroImmatriculation}-${String(index + 1).padStart(3, '0')}`,
+    },
+    {
+      label: 'Agent enregistrant',
+      value: changement.agentEnregistrement?.name || 'N/A',
+    },
+    {
+      label: 'Officier de saisie',
+      value: changement.officierSaisie?.name || 'N/A',
+    },
+    {
+      label: 'Date de saisie',
+      value: changement.dateSaisie
+        ? new Date(changement.dateSaisie).toLocaleDateString('fr-FR')
+        : 'N/A',
+    },
+  ]
+
+  for (const info of adminInfo) {
+    page.drawText(`${info.label}:`, {
+      x: 50,
+      y: yPosition,
+      size: 10,
+      font: fontBold,
+      color: secondaryColor,
+    })
+
+    page.drawText(info.value, {
+      x: 220,
+      y: yPosition,
+      size: 10,
+      font: font,
+      color: rgb(0, 0, 0),
+    })
+
+    yPosition -= 18
+  }
+
+  // === PIED DE PAGE ===
+  const footerY = 80
+
+  page.drawLine({
+    start: { x: 50, y: footerY + 30 },
+    end: { x: width - 50, y: footerY + 30 },
+    thickness: 0.5,
+    color: secondaryColor,
+  })
+
+  page.drawText('Ce document est généré automatiquement par le système de gestion des véhicules', {
+    x: 50,
+    y: footerY + 10,
+    size: 8,
+    font: font,
+    color: secondaryColor,
+  })
+
+  const dateGeneration = new Date().toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+
+  page.drawText(`Généré le: ${dateGeneration}`, {
+    x: 50,
+    y: footerY - 5,
+    size: 8,
+    font: font,
+    color: secondaryColor,
+  })
+
+  // Sauvegarder et retourner le PDF
+  const pdfBytes = await pdfDoc.save()
+  return pdfBytes
+}
+
+/**
+ * Fonction utilitaire pour diviser un texte long en plusieurs lignes
+ */
+function wrapText(text: string, maxChars: number): string[] {
+  const words = text.split(' ')
+  const lines: string[] = []
+  let currentLine = ''
+
+  for (const word of words) {
+    if ((currentLine + word).length <= maxChars) {
+      currentLine += (currentLine ? ' ' : '') + word
+    } else {
+      if (currentLine) lines.push(currentLine)
+      currentLine = word
+    }
+  }
+
+  if (currentLine) lines.push(currentLine)
+  return lines
 }

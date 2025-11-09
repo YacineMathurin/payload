@@ -1,87 +1,65 @@
 'use client'
 
 import React from 'react'
-import { useFormFields } from '@payloadcms/ui'
+import { useRowLabel } from '@payloadcms/ui'
 
-/**
- * Composant bouton pour générer le PDF d'un changement spécifique
- * Utilisé dans chaque élément du tableau historiqueChangements
- */
-export const HistoriqueChangementPDFButton: React.FC = () => {
-  const [loading, setLoading] = React.useState(false)
+export const HistoriqueChangementRowLabel: React.FC = () => {
+  const { data, rowNumber } = useRowLabel<any>()
 
-  // Récupère les données du formulaire via le hook Payload
-  const formFields = useFormFields(([fields]) => fields)
+  console.log('=== HistoriqueChangementRowLabel Debug ===')
+  console.log('data:', data)
+  console.log('rowNumber:', rowNumber)
 
-  // Récupère l'ID du véhicule et l'index du changement actuel
-  const vehicleId = formFields?.id?.value
-  const path = formFields?.path?.value as string | undefined
+  const typeLabels = {
+    plaque: '🔖 Changement de plaque',
+    proprietaire: '👤 Changement de propriétaire',
+    les_deux: '🔄 Changement plaque + propriétaire',
+  }
 
-  // Extrait l'index du chemin
-  const index = path ? parseInt(path.split('.')[1]) : null
+  const typeLabel = typeLabels[data?.typeChangement as keyof typeof typeLabels] || 'Changement'
 
-  const handleGeneratePDF = async () => {
-    if (!vehicleId || index === null) {
-      alert('Impossible de générer le PDF. Données manquantes.')
-      return
-    }
+  // Déterminer la couleur selon le type - Rouge pour changement de plaque
+  const isPlateChange = data?.typeChangement === 'plaque'
+  const labelColor = isPlateChange ? '#dc2626' : '#1e293b'
+  const backgroundColor = isPlateChange ? '#fee2e2' : 'transparent'
 
-    setLoading(true)
-
-    try {
-      const response = await fetch(`/api/vehicles/generate-historique-pdf/${vehicleId}/${index}`, {
-        method: 'GET',
-        credentials: 'include',
+  // Formater la date
+  const dateStr = data?.dateChangement
+    ? new Date(data.dateChangement).toLocaleDateString('fr-FR', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
       })
+    : 'Date non définie'
 
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Erreur lors de la génération')
-      }
-
-      // Télécharge le PDF
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `changement-${vehicleId}-${index + 1}.pdf`
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
-    } catch (error) {
-      console.error('Erreur:', error)
-      alert('Erreur lors de la génération du PDF')
-    } finally {
-      setLoading(false)
-    }
+  // Informations additionnelles selon le type
+  let additionalInfo = ''
+  if (data?.typeChangement === 'plaque' || data?.typeChangement === 'les_deux') {
+    const oldPlate = data?.anciennePlaque || '?'
+    const newPlate = data?.nouvellePlaque || '?'
+    additionalInfo = ` (${oldPlate} → ${newPlate})`
+  } else if (data?.typeChangement === 'proprietaire') {
+    const newOwner = data?.nouveauProprietaire || 'Non spécifié'
+    const oldOwner = data?.ancienProprietaire || 'Non spécifié'
+    additionalInfo = ` (${oldOwner} → ${newOwner})`
   }
 
   return (
-    <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
-      <button
-        type="button"
-        onClick={handleGeneratePDF}
-        disabled={loading || !vehicleId || index === null}
-        style={{
-          padding: '0.5rem 1rem',
-          backgroundColor: loading ? '#94a3b8' : '#3b82f6',
-          color: 'white',
-          border: 'none',
-          borderRadius: '0.375rem',
-          cursor: loading ? 'not-allowed' : 'pointer',
-          fontSize: '0.875rem',
-          fontWeight: '500',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-        }}
-      >
-        <span style={{ fontSize: '1.25rem' }}>📄</span>
-        {loading ? 'Génération en cours...' : 'Générer le PDF de ce changement'}
-      </button>
-    </div>
+    <span
+      style={{
+        fontWeight: 600,
+        color: labelColor,
+        backgroundColor: backgroundColor,
+        padding: isPlateChange ? '0.25rem 0.5rem' : '0',
+        borderRadius: isPlateChange ? '0.25rem' : '0',
+        display: 'inline-block',
+        transition: 'all 0.2s',
+      }}
+    >
+      {typeLabel} - {dateStr}
+      <span style={{ fontWeight: 400, fontSize: '0.9em', opacity: 0.8 }}>{additionalInfo}</span>
+    </span>
   )
 }
 
-export default HistoriqueChangementPDFButton
+export default HistoriqueChangementRowLabel

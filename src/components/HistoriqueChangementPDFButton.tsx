@@ -49,18 +49,18 @@ export const HistoriqueChangementPDFButton: React.FC = () => {
 
   const finalVehicleId = vehicleId || vehicleIdFromParams
 
-  console.log('HistoriqueChangementPDFButton Debug:', {
-    vehicleId,
-    vehicleIdFromParams,
-    finalVehicleId,
-    index,
-    fieldContext,
-    fieldPath: fieldContext?.path,
-    documentInfo,
-  })
+  // console.log('HistoriqueChangementPDFButton Debug:', {
+  //   vehicleId,
+  //   vehicleIdFromParams,
+  //   finalVehicleId,
+  //   index,
+  //   fieldContext,
+  //   fieldPath: fieldContext?.path,
+  //   documentInfo,
+  // })
 
   const handleGeneratePDF = async () => {
-    console.log('handleGeneratePDF called', { finalVehicleId, index })
+    // console.log('handleGeneratePDF called', { finalVehicleId, index })
 
     if (!finalVehicleId || index === null || index < 0 || isNaN(index)) {
       const errorMsg = `Impossible de générer le PDF.\nID: ${finalVehicleId}\nIndex: ${index}`
@@ -73,14 +73,14 @@ export const HistoriqueChangementPDFButton: React.FC = () => {
 
     try {
       const url = `/api/vehicles/generate-historique-pdf/${finalVehicleId}/${index}`
-      console.log('Fetching:', url)
+      // console.log('Fetching:', url)
 
       const response = await fetch(url, {
         method: 'GET',
         credentials: 'include',
       })
 
-      console.log('Response status:', response.status)
+      // console.log('Response status:', response.status)
 
       if (!response.ok) {
         let errorMessage = 'Erreur lors de la génération'
@@ -95,7 +95,7 @@ export const HistoriqueChangementPDFButton: React.FC = () => {
 
       // Télécharge le PDF
       const blob = await response.blob()
-      console.log('PDF blob received, size:', blob.size)
+      // console.log('PDF blob received, size:', blob.size)
 
       const downloadUrl = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -109,7 +109,7 @@ export const HistoriqueChangementPDFButton: React.FC = () => {
         document.body.removeChild(a)
       }, 100)
 
-      console.log('PDF download initiated successfully')
+      // console.log('PDF download initiated successfully')
     } catch (error) {
       console.error('Erreur complète:', error)
       alert(`Erreur:\n${error instanceof Error ? error.message : 'Erreur inconnue'}`)

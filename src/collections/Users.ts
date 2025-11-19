@@ -24,7 +24,7 @@ export const Users: CollectionConfig = {
   ],
 
   access: {
-    read: ({ req }) => req.user?.role === 'super-admin',
+    read: () => true,
     create: ({ req }) => req.user?.role === 'super-admin',
     update: ({ req }) => req.user?.role === 'super-admin',
     delete: ({ req }) => req.user?.role === 'super-admin',

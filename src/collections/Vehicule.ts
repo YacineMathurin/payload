@@ -700,10 +700,11 @@ export const Vehicles: CollectionConfig = {
     {
       name: 'historiqueChangements',
       type: 'array',
-      label: '📜 Historique des changements',
+      label: '📜 Historique',
       admin: {
         description: 'Changements de plaques et de propriétaires',
         initCollapsed: true,
+        isSortable: false,
         components: {
           RowLabel: '@/components/HistoriqueChangementRowLabel', // Pour afficher un label personnalisé
         },

@@ -56,8 +56,9 @@ export const HistoriqueChangementRowLabel: React.FC = () => {
         transition: 'all 0.2s',
       }}
     >
-      {typeLabel} - {dateStr}
-      <span style={{ fontWeight: 400, fontSize: '0.9em', opacity: 0.8 }}>{additionalInfo}</span>
+      {typeLabel}
+      {/*- {dateStr}
+      <span style={{ fontWeight: 400, fontSize: '0.9em', opacity: 0.8 }}>{additionalInfo}</span>*/}
     </span>
   )
 }

@@ -8,6 +8,9 @@ export const Media: CollectionConfig = {
   },
   access: {
     read: () => true,
+    create: () => true,
+    update: () => true,
+    delete: ({ req: { user } }) => user?.role === 'super-admin',
   },
   upload: {
     staticDir: 'media',

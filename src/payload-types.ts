@@ -68,9 +68,7 @@ export interface Config {
   blocks: {};
   collections: {
     users: User;
-    media: Media;
-    'avis-recherche': AvisRecherche;
-    vehicles: Vehicle;
+    parcelles: Parcelle;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -79,9 +77,7 @@ export interface Config {
   collectionsJoins: {};
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
-    media: MediaSelect<false> | MediaSelect<true>;
-    'avis-recherche': AvisRechercheSelect<false> | AvisRechercheSelect<true>;
-    vehicles: VehiclesSelect<false> | VehiclesSelect<true>;
+    parcelles: ParcellesSelect<false> | ParcellesSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -145,219 +141,22 @@ export interface User {
   password?: string | null;
 }
 /**
- * 📁 Documents et fichiers
- *
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "media".
+ * via the `definition` "parcelles".
  */
-export interface Media {
+export interface Parcelle {
   id: string;
-  alt?: string | null;
-  updatedAt: string;
-  createdAt: string;
-  url?: string | null;
-  thumbnailURL?: string | null;
-  filename?: string | null;
-  mimeType?: string | null;
-  filesize?: number | null;
-  width?: number | null;
-  height?: number | null;
-  focalX?: number | null;
-  focalY?: number | null;
-}
-/**
- * 🔍 Véhicules recherchés
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "avis-recherche".
- */
-export interface AvisRecherche {
-  id: string;
-  vehicule: string;
-  typeVehicule: string;
-  numeroImmatriculation: string;
-  numeroSerie?: string | null;
-  marque: string;
-  modele: string;
-  couleur?: string | null;
-  dateVol: string;
-  ville: string;
-  lieuVol: string;
-  declarant: string;
-  telephoneDeclarant: string;
-  emailDeclarant?: string | null;
-  circonstances?: string | null;
-  agentEnregistrement?: (string | null) | User;
-  statutRecherche: 'actif' | 'retrouve' | 'abandonne';
-  dateRecuperation?: string | null;
-  lieuRecuperation?: string | null;
-  agentRecuperation?: (string | null) | User;
-  circonstancesRecuperation?: string | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * 🚗 Gestion complète du registre des véhicules
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "vehicles".
- */
-export interface Vehicle {
-  id: string;
-  typeVehicule?: ('voiture' | 'moto' | 'tricycle' | 'camion' | 'engin_agricole' | 'autre') | null;
-  statut?: ('actif' | 'vole' | 'retrouve') | null;
-  numeroImmatriculation?: string | null;
-  numeroSerie?: string | null;
-  marque?: string | null;
-  modele?: string | null;
-  annee?: number | null;
-  couleur?: string | null;
-  numeroMoteur?: string | null;
-  carburant?: ('essence' | 'diesel' | 'electrique' | 'hybride' | 'gpl' | 'autre') | null;
-  /**
-   * 🔧 Capacité du moteur
-   */
-  cylindree?: number | null;
-  /**
-   * ⚖️ Poids à vide
-   */
-  poids?: number | null;
-  dateAchat?: string | null;
-  paysOrigine?: string | null;
-  /**
-   * 💵 Montant total
-   */
-  prixAchat?: number | null;
-  devise?: ('XOF' | 'EUR' | 'USD' | 'autre') | null;
-  vendeur?: string | null;
-  numeroFacture?: string | null;
-  /**
-   * 📊 Montant payé
-   */
-  droitsDouane?: number | null;
-  taxes?: number | null;
-  fraisImmatriculation?: number | null;
-  /**
-   * Facture, certificat douanier, etc.
-   */
-  documentImportation?: (string | null) | Media;
-  typeProprietaire?: ('physique' | 'morale') | null;
-  dateAcquisition?: string | null;
-  nom?: string | null;
-  ville?: string | null;
-  numeroIdentite?: string | null;
-  adresse?: string | null;
-  telephone?: string | null;
-  email?: string | null;
-  /**
-   * CNI, Passeport ou Registre du Commerce
-   */
-  documentProprietaire?: (string | null) | Media;
-  /**
-   * Changements de plaques et de propriétaires
-   */
-  historiqueChangements?:
-    | {
-        typeChangement?: ('plaque' | 'proprietaire' | 'les_deux') | null;
-        dateChangement?: string | null;
-        anciennePlaque?: string | null;
-        nouvellePlaque?: string | null;
-        ancienProprietaire?: string | null;
-        nouveauProprietaire?: string | null;
-        motif?: string | null;
-        documentChangement?: (string | null) | Media;
-        agentEnregistrement?: (string | null) | User;
-        /**
-         * Rempli automatiquement
-         */
-        officierSaisie?: (string | null) | User;
-        /**
-         * Rempli automatiquement
-         */
-        dateSaisie?: string | null;
-        id?: string | null;
-      }[]
-    | null;
-  /**
-   * Infractions commises avec ce véhicule
-   */
-  infractions?:
-    | {
-        dateInfraction?: string | null;
-        heureInfraction?: string | null;
-        ville?: string | null;
-        lieuInfraction?: string | null;
-        typeInfraction?:
-          | (
-              | 'telephone_volant'
-              | 'sans_ceinture'
-              | 'sans_casque'
-              | 'exces_vitesse'
-              | 'stationnement'
-              | 'sans_permis'
-              | 'ivresse'
-              | 'feu_rouge'
-              | 'douane'
-              | 'contrebande'
-              | 'autre'
-            )
-          | null;
-        descriptionInfraction?: string | null;
-        conducteur?: string | null;
-        numeroPermis?: string | null;
-        montantAmende?: number | null;
-        amendePayee?: boolean | null;
-        numeroPV?: string | null;
-        agentVerbalisant?: (string | null) | User;
-        documentInfraction?: (string | null) | Media;
-        /**
-         * Rempli automatiquement
-         */
-        officierSaisie?: (string | null) | User;
-        /**
-         * Rempli automatiquement
-         */
-        dateSaisie?: string | null;
-        id?: string | null;
-      }[]
-    | null;
-  /**
-   * Détails du vol déclaré
-   */
-  informationsVol?: {
-    dateVol?: string | null;
-    heureVol?: string | null;
-    ville?: string | null;
-    lieuVol?: string | null;
-    declarant?: string | null;
-    telephoneDeclarant?: string | null;
-    emailDeclarant?: string | null;
-    circonstances?: string | null;
-    numeroPlainte?: string | null;
-    documentVol?: (string | null) | Media;
-    /**
-     * Rempli automatiquement
-     */
-    officierSaisie?: (string | null) | User;
-    /**
-     * Rempli automatiquement
-     */
-    dateSaisie?: string | null;
-  };
-  /**
-   * Détails de la récupération du véhicule
-   */
-  informationsRecuperation?: {
-    dateRecuperation?: string | null;
-    heureRecuperation?: string | null;
-    etatVehicule?: ('bon' | 'endommage' | 'tres_endommage') | null;
-    lieuRecuperation?: string | null;
-    recuperePar?: string | null;
-    circonstancesRecuperation?: string | null;
-    agentRecuperation?: (string | null) | User;
-    documentRecuperation?: (string | null) | Media;
-  };
-  notes?: string | null;
+  nom: string;
+  prenom: string;
+  email: string;
+  numero: string;
+  idParcelle: string;
+  typeParcelle?: string | null;
+  superficie?: number | null;
+  commune?: string | null;
+  quartier?: string | null;
+  historiqueProprietaires?: string | null;
+  statut: 'conflit' | 'en_cours' | 'aucun';
   updatedAt: string;
   createdAt: string;
 }
@@ -390,16 +189,8 @@ export interface PayloadLockedDocument {
         value: string | User;
       } | null)
     | ({
-        relationTo: 'media';
-        value: string | Media;
-      } | null)
-    | ({
-        relationTo: 'avis-recherche';
-        value: string | AvisRecherche;
-      } | null)
-    | ({
-        relationTo: 'vehicles';
-        value: string | Vehicle;
+        relationTo: 'parcelles';
+        value: string | Parcelle;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -468,151 +259,20 @@ export interface UsersSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "media_select".
+ * via the `definition` "parcelles_select".
  */
-export interface MediaSelect<T extends boolean = true> {
-  alt?: T;
-  updatedAt?: T;
-  createdAt?: T;
-  url?: T;
-  thumbnailURL?: T;
-  filename?: T;
-  mimeType?: T;
-  filesize?: T;
-  width?: T;
-  height?: T;
-  focalX?: T;
-  focalY?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "avis-recherche_select".
- */
-export interface AvisRechercheSelect<T extends boolean = true> {
-  vehicule?: T;
-  typeVehicule?: T;
-  numeroImmatriculation?: T;
-  numeroSerie?: T;
-  marque?: T;
-  modele?: T;
-  couleur?: T;
-  dateVol?: T;
-  ville?: T;
-  lieuVol?: T;
-  declarant?: T;
-  telephoneDeclarant?: T;
-  emailDeclarant?: T;
-  circonstances?: T;
-  agentEnregistrement?: T;
-  statutRecherche?: T;
-  dateRecuperation?: T;
-  lieuRecuperation?: T;
-  agentRecuperation?: T;
-  circonstancesRecuperation?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "vehicles_select".
- */
-export interface VehiclesSelect<T extends boolean = true> {
-  typeVehicule?: T;
-  statut?: T;
-  numeroImmatriculation?: T;
-  numeroSerie?: T;
-  marque?: T;
-  modele?: T;
-  annee?: T;
-  couleur?: T;
-  numeroMoteur?: T;
-  carburant?: T;
-  cylindree?: T;
-  poids?: T;
-  dateAchat?: T;
-  paysOrigine?: T;
-  prixAchat?: T;
-  devise?: T;
-  vendeur?: T;
-  numeroFacture?: T;
-  droitsDouane?: T;
-  taxes?: T;
-  fraisImmatriculation?: T;
-  documentImportation?: T;
-  typeProprietaire?: T;
-  dateAcquisition?: T;
+export interface ParcellesSelect<T extends boolean = true> {
   nom?: T;
-  ville?: T;
-  numeroIdentite?: T;
-  adresse?: T;
-  telephone?: T;
+  prenom?: T;
   email?: T;
-  documentProprietaire?: T;
-  historiqueChangements?:
-    | T
-    | {
-        typeChangement?: T;
-        dateChangement?: T;
-        anciennePlaque?: T;
-        nouvellePlaque?: T;
-        ancienProprietaire?: T;
-        nouveauProprietaire?: T;
-        motif?: T;
-        documentChangement?: T;
-        agentEnregistrement?: T;
-        officierSaisie?: T;
-        dateSaisie?: T;
-        id?: T;
-      };
-  infractions?:
-    | T
-    | {
-        dateInfraction?: T;
-        heureInfraction?: T;
-        ville?: T;
-        lieuInfraction?: T;
-        typeInfraction?: T;
-        descriptionInfraction?: T;
-        conducteur?: T;
-        numeroPermis?: T;
-        montantAmende?: T;
-        amendePayee?: T;
-        numeroPV?: T;
-        agentVerbalisant?: T;
-        documentInfraction?: T;
-        officierSaisie?: T;
-        dateSaisie?: T;
-        id?: T;
-      };
-  informationsVol?:
-    | T
-    | {
-        dateVol?: T;
-        heureVol?: T;
-        ville?: T;
-        lieuVol?: T;
-        declarant?: T;
-        telephoneDeclarant?: T;
-        emailDeclarant?: T;
-        circonstances?: T;
-        numeroPlainte?: T;
-        documentVol?: T;
-        officierSaisie?: T;
-        dateSaisie?: T;
-      };
-  informationsRecuperation?:
-    | T
-    | {
-        dateRecuperation?: T;
-        heureRecuperation?: T;
-        etatVehicule?: T;
-        lieuRecuperation?: T;
-        recuperePar?: T;
-        circonstancesRecuperation?: T;
-        agentRecuperation?: T;
-        documentRecuperation?: T;
-      };
-  notes?: T;
+  numero?: T;
+  idParcelle?: T;
+  typeParcelle?: T;
+  superficie?: T;
+  commune?: T;
+  quartier?: T;
+  historiqueProprietaires?: T;
+  statut?: T;
   updatedAt?: T;
   createdAt?: T;
 }

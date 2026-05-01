@@ -12,10 +12,7 @@ import { en } from '@payloadcms/translations/languages/en'
 import { fr } from '@payloadcms/translations/languages/fr'
 
 import { Users } from './collections/Users'
-import { Media } from './collections/Media'
-// import { People } from './collections/People'
-import { Vehicles } from './collections/Vehicule'
-import { AvisRecherche } from './collections/AvisRecherche'
+import { Parcelles } from './collections/Parcels'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -27,7 +24,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media, AvisRecherche, Vehicles],
+  collections: [Users, Parcelles],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {

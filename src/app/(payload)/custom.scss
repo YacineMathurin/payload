@@ -210,6 +210,7 @@ select {
 /* Primary Button */
 .btn--style-primary {
   background-color: var(--theme-elevation-900);
+  color: white;
 }
 
 /* Pill (empty) */
@@ -252,6 +253,7 @@ select {
 /* Collapsible */
 .collapsible {
   border-radius: 4px;
+  font-size: 15px;
 }
 
 /* Collapsible Content */
@@ -267,6 +269,13 @@ select {
 /* Collapsible Style Default */
 .collapsible--style-default {
   border: 1px solid var(--theme-elevation-200);
+}
+
+.collapsible-field__row-label-wrap .row-label {
+  z-index: 1;
+}
+.array-field__row-header span {
+  z-index: 1;
 }
 
 /* Table Row Odd */

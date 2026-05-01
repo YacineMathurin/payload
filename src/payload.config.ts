@@ -2,9 +2,11 @@
 import { mongooseAdapter } from '@payloadcms/db-mongodb'
 import { payloadCloudPlugin } from '@payloadcms/payload-cloud'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
+import { resendAdapter } from '@payloadcms/email-resend'
 import path from 'path'
 import { buildConfig } from 'payload'
 import { fileURLToPath } from 'url'
+
 import sharp from 'sharp'
 
 // 🆕 Import the language packs
@@ -27,6 +29,11 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
+  email: resendAdapter({
+    defaultFromAddress: 'onboarding@resend.dev', // Use your verified domain in production
+    defaultFromName: 'My Payload App',
+    apiKey: process.env.RESEND_API_KEY || '',
+  }),
   collections: [Users, Media, AvisRecherche, Vehicles],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',

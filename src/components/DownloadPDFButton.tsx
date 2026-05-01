@@ -23,7 +23,7 @@ export const DownloadPDFButton: React.FC = (props) => {
         />
       )}
       {id && (
-        <div style={{ marginBottom: '20px' }}>
+        <div>
           <button
             type="button"
             onClick={handleClick}

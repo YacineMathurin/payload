@@ -1,10 +1,16 @@
 import type { CollectionConfig } from 'payload'
+import { generateSecurePDF } from '../utils/pdfService'
 
 export const Parcelles: CollectionConfig = {
   slug: 'parcelles',
   admin: {
     useAsTitle: 'idParcelle',
     defaultColumns: ['idParcelle', 'nom', 'commune', 'statut'],
+    components: {
+      edit: {
+        SaveButton: '@/components/DownloadPDFButton#DownloadPDFButton',
+      },
+    },
   },
   fields: [
     {
@@ -67,14 +73,41 @@ export const Parcelles: CollectionConfig = {
         },
       ],
     },
+  ],
+  endpoints: [
     {
-      name: 'downloadPDF',
-      type: 'ui',
-      admin: {
-        // position: 'sidebar',
-        components: {
-          Field: '/components/DownloadPDFButton#DownloadPDFButton',
-        },
+      path: '/:id/generate-pdf',
+      method: 'get',
+      handler: async (req) => {
+        const { id } = req.routeParams
+
+        try {
+          // Correction 1 : Cast en 'any' pour accéder à doc.id et doc.Parcelle
+          const doc = (await req.payload.findByID({
+            collection: 'parcelles',
+            id: id as string,
+          })) as any
+
+          if (!doc) {
+            return new Response('Document non trouvé', { status: 404 })
+          }
+
+          // Appel de votre service (qui utilise Puppeteer)
+          const pdfBuffer = await generateSecurePDF(doc)
+
+          // Correction 2 : Conversion explicite pour la Response
+          return new Response(pdfBuffer, {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/pdf',
+              'Content-Disposition': `attachment; filename="Certificat-${doc.idParcelle || 'parcelle'}.pdf"`,
+              'Content-Length': pdfBuffer.length.toString(),
+            },
+          })
+        } catch (err: any) {
+          console.error(err)
+          return new Response(`Erreur: ${err.message}`, { status: 500 })
+        }
       },
     },
   ],

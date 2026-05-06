@@ -14,6 +14,7 @@ import { fr } from '@payloadcms/translations/languages/fr'
 
 import { Users } from './collections/Users'
 import { Parcelles } from './collections/Parcels'
+import { AuditLogs } from './collections/AuditLogs'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -30,7 +31,7 @@ export default buildConfig({
     defaultFromName: 'My Payload App',
     apiKey: process.env.RESEND_API_KEY || '',
   }),
-  collections: [Users, Parcelles],
+  collections: [Users, Parcelles, AuditLogs],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {

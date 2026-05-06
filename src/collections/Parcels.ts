@@ -1,5 +1,12 @@
 import type { CollectionConfig } from 'payload'
 import { generateSecurePDF } from '../utils/pdfService'
+import { RateLimiterMemory } from 'rate-limiter-flexible'
+
+// Autorise 5 requêtes par fenêtre de 60 secondes
+const pdfRateLimiter = new RateLimiterMemory({
+  points: 5,
+  duration: 60,
+})
 
 export const Parcelles: CollectionConfig = {
   slug: 'parcelles',
@@ -74,38 +81,50 @@ export const Parcelles: CollectionConfig = {
       ],
     },
   ],
+  // À l'intérieur de ta collection 'parcelles'
+
   endpoints: [
     {
       path: '/:id/generate-pdf',
       method: 'get',
       handler: async (req) => {
         const { id } = req.routeParams
+        const userId = req.user?.id || req.headers.get('x-forwarded-for') // Identifie par l'ID user ou l'IP
 
         try {
-          // Correction 1 : Cast en 'any' pour accéder à doc.id et doc.Parcelle
+          // --- ÉTAPE DE SÉCURITÉ : RATE LIMITING ---
+          try {
+            await pdfRateLimiter.consume(userId as string)
+          } catch (rejRes) {
+            return new Response('Trop de requêtes. Veuillez attendre une minute.', {
+              status: 429,
+              headers: { 'Retry-After': '60' },
+            })
+          }
+
+          // 1. Récupération du document
           const doc = (await req.payload.findByID({
             collection: 'parcelles',
             id: id as string,
           })) as any
 
-          if (!doc) {
-            return new Response('Document non trouvé', { status: 404 })
-          }
+          if (!doc) return new Response('Document non trouvé', { status: 404 })
 
-          // Appel de votre service (qui utilise Puppeteer)
-          const pdfBuffer = await generateSecurePDF(doc)
+          console.log(`Génération PDF pour la parcelle ${doc.idParcelle} demandée par ${userId}`)
+          // 2. Appel du service (Traitement RAM pure)
+          const { pdfBuffer } = await generateSecurePDF(doc, req.payload, req.user)
 
-          // Correction 2 : Conversion explicite pour la Response
+          // 3. Réponse directe
           return new Response(pdfBuffer, {
             status: 200,
             headers: {
               'Content-Type': 'application/pdf',
-              'Content-Disposition': `attachment; filename="Certificat-${doc.idParcelle || 'parcelle'}.pdf"`,
+              'Content-Disposition': `inline; filename="Certificat-${doc.idParcelle || id}.pdf"`,
               'Content-Length': pdfBuffer.length.toString(),
             },
           })
         } catch (err: any) {
-          console.error(err)
+          console.error('Erreur PDF:', err.message)
           return new Response(`Erreur: ${err.message}`, { status: 500 })
         }
       },

@@ -69,6 +69,7 @@ export interface Config {
   collections: {
     users: User;
     parcelles: Parcelle;
+    'audit-logs': AuditLog;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -78,6 +79,7 @@ export interface Config {
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
     parcelles: ParcellesSelect<false> | ParcellesSelect<true>;
+    'audit-logs': AuditLogsSelect<false> | AuditLogsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -162,6 +164,23 @@ export interface Parcelle {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "audit-logs".
+ */
+export interface AuditLog {
+  id: string;
+  /**
+   * Empreinte SHA-256 unique du document
+   */
+  documentHash: string;
+  targetId?: string | null;
+  agent: string | User;
+  action?: string | null;
+  timestamp: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -191,6 +210,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'parcelles';
         value: string | Parcelle;
+      } | null)
+    | ({
+        relationTo: 'audit-logs';
+        value: string | AuditLog;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -273,6 +296,19 @@ export interface ParcellesSelect<T extends boolean = true> {
   quartier?: T;
   historiqueProprietaires?: T;
   statut?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "audit-logs_select".
+ */
+export interface AuditLogsSelect<T extends boolean = true> {
+  documentHash?: T;
+  targetId?: T;
+  agent?: T;
+  action?: T;
+  timestamp?: T;
   updatedAt?: T;
   createdAt?: T;
 }
